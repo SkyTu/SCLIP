@@ -122,7 +122,7 @@ int main() {
     {
         T r_m_val = rg.template randomGE<T>(1, M_BITS)[0];
         Fix<T, M_BITS, F, K> r_m(r_m_val);
-        Fix<T, BW, F, K> r_e = r_m.template change_format<BW, F, K>(); // r_e is the zero-extension of r_m
+        Fix<T, BW, F, K> r_e(r_m_val); // r_e is the zero-extension of r_m
         Fix<T, BW, F, K> r_msb = r_m.template get_msb<BW, F, K>(); // r_msb is the MSB of r_m
         write_scalar_shares_to_buffers(r_m);
         write_scalar_shares_to_buffers(r_e);
@@ -157,7 +157,7 @@ int main() {
         for (int i = 0; i < r_m.size(); ++i) {
             T val = rg.template randomGE<T>(1, M_BITS)[0];
             r_m.data()[i] = Fix<T, M_BITS, F, K>(val);
-            r_e.data()[i] = r_m.data()[i];
+            r_e.data()[i] = Fix<T, BW, F, K>(val);
             r_msb.data()[i] = r_m.data()[i].template get_msb<BW, F, K>();
         }
         
@@ -173,30 +173,28 @@ int main() {
         const int D1 = 3, D2 = 4;
 
         FixTensorM R_X(D1, D2), R_Y(D1, D2);
+        FixTensorN R_X_N(D1, D2), R_Y_N(D1, D2);
+        FixTensorN R_X_MSB(D1, D2), R_Y_MSB(D1, D2);
+        FixTensorN R_XY(D1, D2), R_X_RYMSB(D1, D2), R_XMSB_Y(D1, D2), R_XMSB_YMSB(D1, D2);
         
         Random rg;
-        uint64_t* r_x_data = rg.template randomGE<uint64_t>(R_X.size(), M_BITS);
         for(long long i = 0; i < R_X.size(); ++i) {
-            R_X.data()[i] = Fix<uint64_t, M_BITS, F, K>(r_x_data[i]);
+            T val = rg.template randomGE<T>(1, M_BITS)[0];
+            R_X.data()[i] = Fix<T, M_BITS, F, K>(val);
+            R_X_N.data()[i] = Fix<T, BW, F, K>(val);
+            R_X_MSB.data()[i] = R_X.data()[i].template get_msb<BW, F, K>();
+            val = rg.template randomGE<T>(1, M_BITS)[0];
+            R_Y.data()[i] = Fix<T, M_BITS, F, K>(val);
+            R_Y_N.data()[i] = Fix<T, BW, F, K>(val);
+            R_Y_MSB.data()[i] = R_Y.data()[i].template get_msb<BW, F, K>();
         }
-        delete[] r_x_data;
-
-        uint64_t* r_y_data = rg.template randomGE<uint64_t>(R_Y.size(), M_BITS);
-        for(long long i = 0; i < R_Y.size(); ++i) {
-            R_Y.data()[i] = Fix<uint64_t, M_BITS, F, K>(r_y_data[i]);
-        }
-        delete[] r_y_data;
-
-
-        
-        FixTensorN R_X_MSB = get_msb<BW, F, K>(R_X);
-        FixTensorN R_Y_MSB = get_msb<BW, F, K>(R_Y);
-        FixTensorN R_X_N = extend_locally<BW, F, K>(R_X);
-        FixTensorN R_Y_N = extend_locally<BW, F, K>(R_Y);
-        FixTensorN R_XY = R_X_N * R_Y_N;
-        FixTensorN R_X_RYMSB = R_X_N * R_Y_MSB;
-        FixTensorN R_XMSB_Y = R_X_MSB * R_Y_N;
-        FixTensorN R_XMSB_YMSB = R_X_MSB * R_Y_MSB;
+        R_XY = (R_X_N * R_Y_N);
+        // for(long long i = 0; i < R_XY.size(); ++i){
+        //     R_XY.data()[i].val = R_XY.data()[i].val & ((1ULL << M_BITS) - 1);
+        // }
+        R_X_RYMSB = R_X_N * R_Y_MSB;
+        R_XMSB_Y = R_X_MSB * R_Y_N;
+        R_XMSB_YMSB = R_X_MSB * R_Y_MSB;
 
         write_shares_to_buffers(R_X);
         write_shares_to_buffers(R_Y);

@@ -662,9 +662,19 @@ auto elementwise_mul_opt(
     auto term6 = t_y * rxy_msb_n_share;
     auto term7 = t_x * rx_msb_n_share * y_hat_prime_n;
     auto term8 = t_x * rx_msby_n_share;
+    auto term9 = t_x * t_y * rx_msby_msb_n_share;
     
-    
-    FixTensor<T, n, f, k, Rank, Options> result = term1 - term2 + term3 - term4 + term5 - term6 + term7 - term8;
+    std::cout << "term1 " << term1.data()[0].val << std::endl;
+    std::cout << "term2 " << term2.data()[0].val << std::endl;
+    std::cout << "term3 " << term3.data()[0].val << std::endl;
+    std::cout << "term4 " << term4.data()[0].val << std::endl;
+    std::cout << "term5 " << term5.data()[0].val << std::endl;
+    std::cout << "term6 " << term6.data()[0].val << std::endl;
+    std::cout << "term7 " << term7.data()[0].val << std::endl;
+    std::cout << "term8 " << term8.data()[0].val << std::endl;
+    std::cout << "term9 " << term9.data()[0].val << std::endl;
+
+    FixTensor<T, n, f, k, Rank, Options> result = term1 - term2 + term3 - term4 + term5 - term6 + term7 - term8 + term9;
     return result;
 }
 

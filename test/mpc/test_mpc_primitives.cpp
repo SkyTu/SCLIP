@@ -319,7 +319,7 @@ void test_elementwise_mul_opt(MPC& mpc) {
     FixTensorN c_n_share = elementwise_mul_opt<uint64_t, M_BITS, F, K, BW, 2, Eigen::RowMajor>(a_m_share, b_m_share, 
         r_x_m_share, r_x_n_share, r_x_msb_share,
         r_y_m_share, r_y_n_share, r_y_msb_share,
-        r_xy_share, r_x_rymsb_share, r_xmsb_y_share, r_xmsb_ymsb_share);
+        r_xy_share, r_xmsb_y_share, r_x_rymsb_share, r_xmsb_ymsb_share);
 
     // 5. Reconstruction and Verification
     FixTensorN C = reconstruct_tensor(c_n_share);
@@ -339,7 +339,7 @@ void test_elementwise_mul_opt(MPC& mpc) {
             for (int j = 0; j < D2; ++j) {
                 std::cout << A_n_plain(i,j).to_float<double>() << " " << B_n_plain(i,j).to_float<double>()  << " " << C_trunc(i,j).to_float<double>() << " " << expected_C(i,j).to_float<double>() << std::endl;
                 if (std::abs(C_trunc(i,j).template to_float<double>() - expected_C(i,j).template to_float<double>()) > 1e-1) {
-                    std::cout << "C_trunc(i,j).to_float<double>() - expected_C(i,j).template to_float<double>() = " << C_trunc(i,j).to_float<double>() - expected_C(i,j).template to_float<double>() << std::endl;
+                    std::cout << "C_trunc(i,j).to_float<double>() - expected_C(i,j).template to_float<double>() = " << C_trunc(i,j).val - expected_C(i,j).val << std::endl;
                     pass = false;
                 }
             }
