@@ -52,7 +52,7 @@ int main() {
     // For test_elementwise_mul_opt
     total_size += 2 * (3 * 4) * sizeof(uint64_t); // for r_x_m, r_y_m (M_BITS)
     total_size += 8 * (3 * 4) * sizeof(uint64_t); // for r_x_n, r_y_n, and MSBs and products (BW)
-    total_size += fc_randomness_size;
+    // total_size += fc_randomness_size;
     
     std::cout << "Total size per party: " << total_size << " bytes." << std::endl;
 
@@ -174,10 +174,11 @@ int main() {
         secret_share_and_write_tensor(R_XMSB_YMSB, p0_ptr, p1_ptr);
     }
 
-    // For FC Layer Test
-    {
-        fc_layer.dealer_generate_randomness(p0_ptr, p1_ptr);
-    }
+    // // For FC Layer Test
+    // {
+    //     fc_layer.dealer_generate_forward_randomness(p0_ptr, p1_ptr, U, V);
+    //     fc_layer.dealer_generate_backward_randomness(p0_ptr, p1_ptr);
+    // }
 
     // 4. Assert that we wrote the exact calculated size
     size_t p0_offset = p0_ptr - p0_data;

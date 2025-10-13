@@ -35,7 +35,9 @@ int main() {
     uint8_t* p1_ptr = p1_data;
 
     // 3. Generate the randomness and write the shares to the buffers
-    fc_layer.dealer_generate_randomness(p0_ptr, p1_ptr);
+    FixTensor<T_fc, IN_BW_fc, F_fc, K_INT_fc, 3> U(params_fc.B, params_fc.M, params_fc.N); U.initialize();
+    FixTensor<T_fc, IN_BW_fc, F_fc, K_INT_fc, 2> V(params_fc.N, params_fc.K); V.initialize();
+    fc_layer.dealer_generate_forward_randomness(p0_ptr, p1_ptr, U, V);
     fc_layer.dealer_generate_backward_randomness(p0_ptr, p1_ptr);
 
     // 4. Assert that we wrote the exact calculated size

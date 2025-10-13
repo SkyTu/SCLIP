@@ -30,9 +30,10 @@ public:
     using IncomingGradTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
     using OutgoingGradTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
 
-private:
+
     FCLayerParams p;
     WeightTensor W_share; // Secret share of the weight matrix
+    WeightTensor W_rec; // Reconstructed weight matrix
     BiasTensor Y_share;   // Secret share of the bias vector
 
     // Member variables to store randomness for the forward pass
@@ -130,10 +131,8 @@ public:
     }
 
     // For use by the dealer: generates plaintext U,V,Z, secret shares them, and writes the shares to the provided buffers.
-    void dealer_generate_randomness(uint8_t*& p0_buf, uint8_t*& p1_buf) {
+    void dealer_generate_forward_randomness(uint8_t*& p0_buf, uint8_t*& p1_buf, FixTensor<T, IN_BW, F, K_INT, 3>& U, WeightTensor& V) {
         // 1. Generate plaintext U, V, Z
-        FixTensor<T, IN_BW, F, K_INT, 3> U(p.B, p.M, p.N); U.initialize();
-        WeightTensor V(p.N, p.K); V.initialize();
         auto Z = tensor_mul(U, V);
 
         // 2. Secret share and write each tensor to the buffers
@@ -210,11 +209,13 @@ public:
 
     // Forward pass for non-batched input
     template<int TRUNC_FWD>
-    auto forward(const FixTensor<T, IN_BW, F, K_INT, 3>& x_share) {
+    auto forward(const FixTensor<T, IN_BW, F, K_INT, 3>& x_share, const FixTensor<T, IN_BW, F, K_INT, 3>& x_reconstructed = nullptr) {
         if (mpc_instance == nullptr) throw std::runtime_error("MPC instance must be initialized before using forward.");
         this->input_share = x_share; // Cache for backward pass
-        auto mul_result_share = secure_matmul(x_share, W_share, U_fwd, V_fwd, Z_fwd);
-        std::cout << "mul_result_share calculated " << std::endl;
+        for(int i = 0; i < x_reconstructed.size(); ++i) {
+            std::cout << "x_reconstructed(" << i << "): " << x_reconstructed.data()[i].val << std::endl;
+        }
+        auto mul_result_share = secure_matmul(x_share, W_share, U_fwd, V_fwd, Z_fwd, &x_reconstructed, &W_rec);
         if (p.use_bias) {
             // FIXME: Bias addition is temporarily disabled due to type mismatch issues.
             // FixTensor<T, IN_BW, 2*F, K_INT, 2> Y_share_broadcasted = Y_share.broadcast(Eigen::array<int, 2>{p.M, 1});
@@ -225,8 +226,7 @@ public:
         
         // Truncate Reduce only
         auto trunc_share = truncate_reduce_tensor(mul_result_share);
-        std::cout << "trunc_share calculated " << std::endl;
-        return change_bitwidth<OUT_BW, F, K_INT>(trunc_share);
+        return trunc_share;
     }
 
     auto backward(const IncomingGradTensor& incoming_grad_share) {

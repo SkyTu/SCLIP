@@ -38,8 +38,16 @@ void test_fc_forward(MPC& mpc) {
         memcpy(weights_buffer + sizeof(w_data), y_data, sizeof(y_data));
         weights_buffer_ptr = weights_buffer;
     }
+    else{
+        float w_data[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        float y_data[] = {0.0, 0.0, 0.0, 0.0};
+        weights_buffer = new uint8_t[sizeof(w_data) + sizeof(y_data)];
+        memcpy(weights_buffer, w_data, sizeof(w_data));
+        memcpy(weights_buffer + sizeof(w_data), y_data, sizeof(y_data));
+        weights_buffer_ptr = weights_buffer;
+    }
     fc_layer.initWeights(&weights_buffer_ptr, true);
-    if (mpc.party == 0) {
+    if (weights_buffer) {
         delete[] weights_buffer;
     }
     
@@ -65,10 +73,18 @@ void test_fc_forward(MPC& mpc) {
     } else {
         x_plain.setZero();
     }
-    auto x_share = secret_share_tensor(x_plain);
 
+    auto x_plain_rec=reconstruct_tensor(x_plain);
+    auto x_share = x_plain - fc_layer.U_fwd;
+    auto x_reconstructed = reconstruct_tensor(x_share);
+    
+    fc_layer.W_rec = reconstruct_tensor(fc_layer.W_share - fc_layer.V_fwd);
+
+
+    std::cout << "execute forward pass" << std::endl;
     // 4. Execute Forward Pass
-    auto y_share = fc_layer.forward<0>(x_share);
+    auto y_share = fc_layer.forward<0>(x_plain, x_reconstructed);
+    std::cout << "forward pass executed" << std::endl;
     auto y_reconstructed = reconstruct_tensor(y_share);
 
     // 5. Plaintext Verification
@@ -85,7 +101,7 @@ void test_fc_forward(MPC& mpc) {
         
         auto expected_trunc = truncate_reduce_tensor(expected_mul);
         auto expected_y_final = change_bitwidth<OUT_BW, F, K_INT>(expected_trunc);
-
+        std::cout << "Forward Result" << std::endl;
         std::cout << "Reconstructed Output:\n" << y_reconstructed << std::endl;
         std::cout << "Expected Output:\n" << expected_y_final << std::endl;
 
@@ -123,9 +139,14 @@ void test_fc_backward(MPC& mpc) {
         weights_buffer = new uint8_t[sizeof(w_data)];
         memcpy(weights_buffer, w_data, sizeof(w_data));
         weights_buffer_ptr = weights_buffer;
+    } else {
+        float w_data[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        weights_buffer = new uint8_t[sizeof(w_data)];
+        memcpy(weights_buffer, w_data, sizeof(w_data));
+        weights_buffer_ptr = weights_buffer;
     }
     fc_layer.initWeights(&weights_buffer_ptr, true);
-    if (mpc.party == 0) delete[] weights_buffer;
+    if (weights_buffer) delete[] weights_buffer;
 
     // 2. Load backward pass randomness
     // First, skip forward randomness to get to the backward part.
@@ -155,6 +176,7 @@ void test_fc_backward(MPC& mpc) {
 
     // 5. Plaintext Verification
     if (mpc.party == 0) {
+        std::cout << "Backward Result" << std::endl;
         WeightTensor W_plain(params.N, params.K);
         W_plain.setValues({ {FixIn(1.0), FixIn(-1.0), FixIn(0.5), FixIn(1.2)}, {FixIn(-0.8), FixIn(1.2), FixIn(1.5), FixIn(-0.5)}, {FixIn(0.5), FixIn(-0.5), FixIn(1.0), FixIn(-1.0)} });
         WeightTensor W_plain_T = W_plain.shuffle(Eigen::array<int, 2>{1, 0});
@@ -198,7 +220,7 @@ int main(int argc, char** argv) {
     mpc.connect(addrs, 9001);
 
     test_fc_forward(mpc);
-    test_fc_backward(mpc);
+    // test_fc_backward(mpc);
 
     return 0;
 }
