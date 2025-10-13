@@ -22,12 +22,13 @@ class FCLayer {
 public:
     using FixIn = Fix<T, IN_BW, F, K_INT>;
     using FixOut = Fix<T, OUT_BW, F, K_INT>;
-    using FixBias = Fix<T, IN_BW, 2*F, K_INT>; // New type for bias
-    using InputTensor = FixTensor<T, IN_BW, F, K_INT, 2>;
+    using FixBias = Fix<T, IN_BW, F, K_INT>; // New type for bias
+    using InputTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
     using WeightTensor = FixTensor<T, IN_BW, F, K_INT, 2>;
-    using BiasTensor = FixTensor<T, IN_BW, 2*F, K_INT, 1>; // Use the new FixBias type
-    using OutputTensor2D = FixTensor<T, OUT_BW, F, K_INT, 2>;
+    using BiasTensor = FixTensor<T, IN_BW, F, K_INT, 1>; // Use the new FixBias type
     using OutputTensor3D = FixTensor<T, OUT_BW, F, K_INT, 3>;
+    using IncomingGradTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
+    using OutgoingGradTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
 
 private:
     FCLayerParams p;
@@ -35,18 +36,17 @@ private:
     BiasTensor Y_share;   // Secret share of the bias vector
 
     // Member variables to store randomness for the forward pass
-    // For non-batched input (Rank 2)
-    InputTensor U_fwd;
-    WeightTensor V_fwd;
-    FixTensor<T, IN_BW, F, K_INT, 2> Z_fwd;
-    // For batched input (Rank 3)
-    FixTensor<T, IN_BW, F, K_INT, 3> U_fwd_b;
-    // V_fwd is the same for batched and non-batched
-    FixTensor<T, IN_BW, F, K_INT, 3> Z_fwd_b;
+    FixTensor<T, IN_BW, F, K_INT, 3> U_fwd;
+    FixTensor<T, IN_BW, F, K_INT, 2> V_fwd;
+    FixTensor<T, IN_BW, F, K_INT, 3> Z_fwd;
     
+    // Member variables to store randomness for the backward pass
+    IncomingGradTensor U_bwd;
+    WeightTensor V_bwd; // This is W^T, so its dimensions are KxN
+    OutgoingGradTensor Z_bwd;
+
     // To store the input share for the backward pass
     InputTensor input_share;
-    FixTensor<T, IN_BW, F, K_INT, 3> input_share_b;
 
 
 public:
@@ -123,75 +123,94 @@ public:
     // For use by the dealer: calculates the byte size of all randomness needed for the forward pass.
     size_t getForwardRandomnessSize() {
         size_t total_size = 0;
-        if (p.B == 1) {
-            total_size += InputTensor(p.M, p.N).size() * sizeof(T);
-            total_size += WeightTensor(p.N, p.K).size() * sizeof(T);
-            total_size += OutputTensor2D(p.M, p.K).size() * sizeof(T);
-        } else {
-            total_size += FixTensor<T, IN_BW, F, K_INT, 3>(p.B, p.M, p.N).size() * sizeof(T);
-            total_size += WeightTensor(p.N, p.K).size() * sizeof(T);
-            total_size += OutputTensor3D(p.B, p.M, p.K).size() * sizeof(T);
-        }
+        total_size += FixTensor<T, IN_BW, F, K_INT, 3>(p.B, p.M, p.N).size() * sizeof(T);
+        total_size += WeightTensor(p.N, p.K).size() * sizeof(T);
+        total_size += OutputTensor3D(p.B, p.M, p.K).size() * sizeof(T);
         return total_size;
     }
 
-    // For use by the dealer: generates and writes all forward pass randomness into the provided buffers.
-    void generateForwardRandomness(uint8_t*& random_data_ptr) {
-        auto write_tensor = [&](auto& tensor) {
-            size_t size_in_bytes = tensor.size() * sizeof(T);
-            memcpy(random_data_ptr, tensor.data(), size_in_bytes);
-            random_data_ptr += size_in_bytes;
-        };
+    // For use by the dealer: generates plaintext U,V,Z, secret shares them, and writes the shares to the provided buffers.
+    void dealer_generate_randomness(uint8_t*& p0_buf, uint8_t*& p1_buf) {
+        // 1. Generate plaintext U, V, Z
+        FixTensor<T, IN_BW, F, K_INT, 3> U(p.B, p.M, p.N); U.initialize();
+        WeightTensor V(p.N, p.K); V.initialize();
+        auto Z = tensor_mul(U, V);
 
-        Random random_gen;
-        if (p.B == 1) {
-            InputTensor U(p.M, p.N); U.initialize(random_gen);
-            WeightTensor V(p.N, p.K); V.initialize(random_gen);
-            auto Z_temp = tensor_mul(U, V);
-            OutputTensor2D Z = Z_temp.template cast<FixOut>();
-            
-            write_tensor(U);
-            write_tensor(V);
-            write_tensor(Z);
-        } else {
-            FixTensor<T, IN_BW, F, K_INT, 3> U(p.B, p.M, p.N); U.initialize(random_gen);
-            WeightTensor V(p.N, p.K); V.initialize(random_gen);
-            auto Z_temp = tensor_mul(U, V);
-            OutputTensor3D Z = Z_temp.template cast<FixOut>();
-
-            write_tensor(U);
-            write_tensor(V);
-            write_tensor(Z);
-        }
+        // 2. Secret share and write each tensor to the buffers
+        secret_share_and_write_tensor(U, p0_buf, p1_buf);
+        secret_share_and_write_tensor(V, p0_buf, p1_buf);
+        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
     }
 
-    // The pointer is advanced by this function
-    void readForwardRandomness(uint8_t*& random_data_ptr) {
+    // For use by parties: reads randomness shares from the MPC random data buffer.
+    void readForwardRandomness(MPC& mpc) {
+        uint8_t* random_data_ptr = mpc.random_data.data() + mpc.random_data_idx;
+        
         auto read_tensor = [&](auto& tensor, const auto& dims) {
             tensor.resize(dims);
-            size_t size_in_bytes = tensor.size() * sizeof(T);
-            memcpy(tensor.data(), random_data_ptr, size_in_bytes);
+            size_t num_elements = tensor.size();
+            size_t size_in_bytes = num_elements * sizeof(T);
+
+            T* src_ptr = reinterpret_cast<T*>(random_data_ptr);
+            for (size_t i = 0; i < num_elements; ++i) {
+                tensor.data()[i] = typename std::decay_t<decltype(tensor)>::Scalar(src_ptr[i]);
+            }
             random_data_ptr += size_in_bytes;
         };
 
-        if (p.B == 1) {
-            read_tensor(U_fwd, Eigen::array<long, 2>{p.M, p.N});
-            read_tensor(V_fwd, Eigen::array<long, 2>{p.N, p.K});
-            read_tensor(Z_fwd, Eigen::array<long, 2>{p.M, p.K});
-        } else {
-            read_tensor(U_fwd_b, Eigen::array<long, 3>{p.B, p.M, p.N});
-            read_tensor(V_fwd, Eigen::array<long, 2>{p.N, p.K});
-            read_tensor(Z_fwd_b, Eigen::array<long, 3>{p.B, p.M, p.K});
-        }
+        read_tensor(U_fwd, Eigen::array<long, 3>{p.B, p.M, p.N});
+        read_tensor(V_fwd, Eigen::array<long, 2>{p.N, p.K});
+        read_tensor(Z_fwd, Eigen::array<long, 3>{p.B, p.M, p.K});
+
+        mpc.random_data_idx = random_data_ptr - mpc.random_data.data();
     }
 
-    void readBackwardRandomness() {
-        // Implementation to follow (placeholder)
+    // --- Backward Pass Randomness ---
+    size_t getBackwardRandomnessSize() {
+        size_t total_size = 0;
+        total_size += IncomingGradTensor(p.B, p.M, p.K).size() * sizeof(T); // U_bwd
+        total_size += WeightTensor(p.K, p.N).size() * sizeof(T);         // V_bwd (this is W^T)
+        total_size += OutgoingGradTensor(p.B, p.M, p.N).size() * sizeof(T); // Z_bwd
+        return total_size;
     }
+
+    void dealer_generate_backward_randomness(uint8_t*& p0_buf, uint8_t*& p1_buf) {
+        IncomingGradTensor U(p.B, p.M, p.K); U.initialize();
+        WeightTensor V(p.K, p.N); V.initialize(); // V is KxN
+
+        auto Z = tensor_mul(U, V);
+        secret_share_and_write_tensor(U, p0_buf, p1_buf);
+        secret_share_and_write_tensor(V, p0_buf, p1_buf);
+        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
+    }
+    
+    void readBackwardRandomness(MPC& mpc) {
+        uint8_t* random_data_ptr = mpc.random_data.data() + mpc.random_data_idx;
+        
+        auto read_tensor = [&](auto& tensor, const auto& dims) {
+            tensor.resize(dims);
+            size_t num_elements = tensor.size();
+            size_t size_in_bytes = num_elements * sizeof(T);
+
+            T* src_ptr = reinterpret_cast<T*>(random_data_ptr);
+            for (size_t i = 0; i < num_elements; ++i) {
+                tensor.data()[i] = typename std::decay_t<decltype(tensor)>::Scalar(src_ptr[i]);
+            }
+            random_data_ptr += size_in_bytes;
+        };
+
+        read_tensor(U_bwd, Eigen::array<long, 3>{p.B, p.M, p.K});
+        read_tensor(V_bwd, Eigen::array<long, 2>{p.K, p.N});
+        read_tensor(Z_bwd, Eigen::array<long, 3>{p.B, p.M, p.N});
+
+        mpc.random_data_idx = random_data_ptr - mpc.random_data.data();
+    }
+    
+    // --- Forward and Backward Pass ---
 
     // Forward pass for non-batched input
     template<int TRUNC_FWD>
-    auto forward(const InputTensor& x_share) {
+    auto forward(const FixTensor<T, IN_BW, F, K_INT, 3>& x_share) {
         if (mpc_instance == nullptr) throw std::runtime_error("MPC instance must be initialized before using forward.");
         this->input_share = x_share; // Cache for backward pass
         auto mul_result_share = secure_matmul(x_share, W_share, U_fwd, V_fwd, Z_fwd);
@@ -210,24 +229,19 @@ public:
         return change_bitwidth<OUT_BW, F, K_INT>(trunc_share);
     }
 
-    // Forward pass for batched input
-    template<int TRUNC_FWD>
-    auto forward(const FixTensor<T, IN_BW, F, K_INT, 3>& x_share) {
-        if (mpc_instance == nullptr) throw std::runtime_error("MPC instance must be initialized before using forward.");
-        this->input_share_b = x_share; // Cache for backward pass
-        auto mul_result_share_expr = secure_matmul(x_share, W_share, U_fwd_b, V_fwd, Z_fwd_b);
-
-        // Manually cast the result to a tensor with 2*F fractional bits
-        FixTensor<T, IN_BW, 2*F, K_INT, 3> mul_result_share(p.B, p.M, p.K);
-        for(int i = 0; i < mul_result_share.size(); ++i) {
-            mul_result_share.data()[i].val = mul_result_share_expr.data()[i].val;
-        }
-
-        if (p.use_bias) {
-            // FIXME: Bias addition is temporarily disabled due to type mismatch issues.
-        }
+    auto backward(const IncomingGradTensor& incoming_grad_share) {
+        if (mpc_instance == nullptr) throw std::runtime_error("MPC instance must be initialized before using backward.");
         
-        auto trunc_share = truncate_reduce_tensor(mul_result_share);
-        return change_bitwidth<OUT_BW, F, K_INT>(trunc_share);
+        // Transpose the weight matrix share
+        WeightTensor W_share_T = W_share.shuffle(Eigen::array<int, 2>{1, 0});
+        
+        // Secure MatMul: [dE/dX] = [dE/dY] * [W]^T
+        auto outgoing_grad_share_wide = secure_matmul(incoming_grad_share, W_share_T, U_bwd, V_bwd, Z_bwd);
+
+        auto trunc_share = truncate_reduce_tensor(outgoing_grad_share_wide);
+        std::cout << "trunc_share calculated " << std::endl;
+        // The result of the multiplication has 2*f fractional bits and needs to be truncated.
+        return trunc_share;
     }
+    
 };

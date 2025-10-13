@@ -243,4 +243,73 @@ public:
     }
 };
 
+// ================= Dealer Helper Functions =================
+
+// Takes a plaintext tensor, splits it into two secret shares.
+template<typename FixTensorType>
+std::pair<FixTensorType, FixTensorType> secret_share_into_two(const FixTensorType& plaintext) {
+    FixTensorType share0(plaintext.dimensions());
+    FixTensorType share1(plaintext.dimensions());
+    Random rg;
+
+    for (long long i = 0; i < plaintext.size(); ++i) {
+        using T = typename FixTensorType::Scalar::val_type;
+        constexpr int bw = FixTensorType::Scalar::bitwidth;
+        T r_val = rg.template randomGE<T>(1, bw)[0];
+        share1.data()[i] = typename FixTensorType::Scalar(r_val);
+        share0.data()[i] = plaintext.data()[i] - share1.data()[i];
+    }
+    return {share0, share1};
+}
+
+// Takes a plaintext scalar, splits it into two secret shares.
+template<typename FixType>
+std::pair<FixType, FixType> secret_share_into_two_scalar(const FixType& plaintext) {
+    using T = typename FixType::val_type;
+    constexpr int bw = FixType::bitwidth;
+    Random rg;
+    T r_val = rg.template randomGE<T>(1, bw)[0];
+    FixType share1(r_val);
+    FixType share0 = plaintext - share1;
+    return {share0, share1};
+}
+
+// Takes a plaintext tensor, shares it, and writes the raw .val of each share to the respective party's buffer.
+// The buffer pointers are advanced by this function.
+template<typename FixTensorType>
+void secret_share_and_write_tensor(const FixTensorType& plaintext, uint8_t*& p0_buf, uint8_t*& p1_buf) {
+    auto [share0, share1] = secret_share_into_two(plaintext);
+    
+    using T = typename FixTensorType::Scalar::val_type;
+    size_t num_elements = plaintext.size();
+    size_t size_bytes = num_elements * sizeof(T);
+
+    T* p0_dest = reinterpret_cast<T*>(p0_buf);
+    for(size_t i = 0; i < num_elements; ++i) {
+        p0_dest[i] = share0.data()[i].val;
+    }
+    p0_buf += size_bytes;
+
+    T* p1_dest = reinterpret_cast<T*>(p1_buf);
+    for(size_t i = 0; i < num_elements; ++i) {
+        p1_dest[i] = share1.data()[i].val;
+    }
+    p1_buf += size_bytes;
+}
+
+// Takes a plaintext scalar, shares it, and writes the raw .val of each share to the respective party's buffer.
+template<typename FixType>
+void secret_share_and_write_scalar(const FixType& plaintext, uint8_t*& p0_buf, uint8_t*& p1_buf) {
+    auto [share0, share1] = secret_share_into_two_scalar(plaintext);
+    using T = typename FixType::val_type;
+    size_t size_bytes = sizeof(T);
+
+    memcpy(p0_buf, &share0.val, size_bytes);
+    p0_buf += size_bytes;
+
+    memcpy(p1_buf, &share1.val, size_bytes);
+    p1_buf += size_bytes;
+}
+
+
 #endif // SCLIP_FIX_TENSOR_H

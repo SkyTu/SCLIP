@@ -5,35 +5,10 @@
 #include "mpc/fix_tensor.h"
 #include "utils/random.h"
 #include "mpc/tensor_ops.h"
+#include "nn/FC.h"
 
-// Secret share helper for Tensors
-template<typename FixTensorType>
-std::pair<FixTensorType, FixTensorType> secret_share_into_two(const FixTensorType& plaintext) {
-    FixTensorType share0(plaintext.dimensions());
-    FixTensorType share1(plaintext.dimensions());
-    Random rg;
 
-    for (long long i = 0; i < plaintext.size(); ++i) {
-        using T = typename FixTensorType::Scalar::val_type;
-        constexpr int bw = FixTensorType::Scalar::bitwidth;
-        T r_val = rg.template randomGE<T>(1, bw)[0];
-        share1.data()[i] = typename FixTensorType::Scalar(r_val);
-        share0.data()[i] = plaintext.data()[i] - share1.data()[i];
-    }
-    return {share0, share1};
-}
 
-// Secret share helper for scalar Fix
-template<typename FixType>
-std::pair<FixType, FixType> secret_share_into_two_scalar(const FixType& plaintext) {
-    using T = typename FixType::val_type;
-    constexpr int bw = FixType::bitwidth;
-    Random rg;
-    T r_val = rg.template randomGE<T>(1, bw)[0];
-    FixType share1(r_val);
-    FixType share0 = plaintext - share1;
-    return {share0, share1};
-}
 
 int main() {
     std::cout << "Dealer starting..." << std::endl;
@@ -45,6 +20,18 @@ int main() {
     const int K = 31;
     constexpr int M_BITS = BW - F;
     Random rg;
+
+    // --- FC Layer Setup ---
+    using T_fc = uint64_t;
+    const int F_fc = 16;
+    const int K_INT_fc = 15;
+    const int IN_BW_fc = 64;
+    const int OUT_BW_fc = 48;
+    FCLayerParams params_fc = {5, 2, 3, 4, false, false, 0};
+    FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc> fc_layer(params_fc);
+    size_t fc_randomness_size = fc_layer.getForwardRandomnessSize();
+
+
     // 1. Pre-calculate total size
     size_t total_size = 0;
     const size_t scalar_size = sizeof(T);
@@ -65,47 +52,26 @@ int main() {
     // For test_elementwise_mul_opt
     total_size += 2 * (3 * 4) * sizeof(uint64_t); // for r_x_m, r_y_m (M_BITS)
     total_size += 8 * (3 * 4) * sizeof(uint64_t); // for r_x_n, r_y_n, and MSBs and products (BW)
+    total_size += fc_randomness_size;
     
     std::cout << "Total size per party: " << total_size << " bytes." << std::endl;
 
     // 2. Allocate raw uint8_t* buffers
     uint8_t* p0_data = new uint8_t[total_size];
     uint8_t* p1_data = new uint8_t[total_size];
-    size_t p0_offset = 0;
-    size_t p1_offset = 0;
-
-    // Helper lambda for writing shares to buffers
-    auto write_shares_to_buffers = [&](const auto& tensor) {
-        auto [share0, share1] = secret_share_into_two(tensor);
-        size_t size_bytes = tensor.size() * sizeof(typename std::remove_reference_t<decltype(tensor)>::Scalar);
-        
-        memcpy(p0_data + p0_offset, share0.data(), size_bytes);
-        p0_offset += size_bytes;
-        
-        memcpy(p1_data + p1_offset, share1.data(), size_bytes);
-        p1_offset += size_bytes;
-    };
-
-    auto write_scalar_shares_to_buffers = [&](const auto& scalar) {
-        auto [share0, share1] = secret_share_into_two_scalar(scalar);
-        size_t size_bytes = sizeof(typename std::remove_reference_t<decltype(scalar)>::val_type);
-
-        memcpy(p0_data + p0_offset, &share0.val, size_bytes);
-        p0_offset += size_bytes;
-
-        memcpy(p1_data + p1_offset, &share1.val, size_bytes);
-        p1_offset += size_bytes;
-    };
 
     // 3. Generate randomness and write to buffers
+    uint8_t* p0_ptr = p0_data;
+    uint8_t* p1_ptr = p1_data;
+
     // For test_secure_matmul (2D)
     {
         FixTensor<T, BW, F, K, 2> U(2, 3); U.initialize();
         FixTensor<T, BW, F, K, 2> V(3, 2); V.initialize();
         FixTensor<T, BW, F, K, 2> Z = tensor_mul(U, V);
-        write_shares_to_buffers(U);
-        write_shares_to_buffers(V);
-        write_shares_to_buffers(Z);
+        secret_share_and_write_tensor(U, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(V, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(Z, p0_ptr, p1_ptr);
     }
     
     // For test_secure_matmul_3d
@@ -113,9 +79,9 @@ int main() {
         FixTensor<T, BW, F, K, 3> U(2, 2, 3); U.initialize();
         FixTensor<T, BW, F, K, 2> V(3, 2); V.initialize();
         FixTensor<T, BW, F, K, 3> Z = tensor_mul(U, V);
-        write_shares_to_buffers(U);
-        write_shares_to_buffers(V);
-        write_shares_to_buffers(Z);
+        secret_share_and_write_tensor(U, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(V, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(Z, p0_ptr, p1_ptr);
     }
 
     // For test_truncate_zero_extend_scalar
@@ -124,9 +90,9 @@ int main() {
         Fix<T, M_BITS, F, K> r_m(r_m_val);
         Fix<T, BW, F, K> r_e(r_m_val); // r_e is the zero-extension of r_m
         Fix<T, BW, F, K> r_msb = r_m.template get_msb<BW, F, K>(); // r_msb is the MSB of r_m
-        write_scalar_shares_to_buffers(r_m);
-        write_scalar_shares_to_buffers(r_e);
-        write_scalar_shares_to_buffers(r_msb);
+        secret_share_and_write_scalar(r_m, p0_ptr, p1_ptr);
+        secret_share_and_write_scalar(r_e, p0_ptr, p1_ptr);
+        secret_share_and_write_scalar(r_msb, p0_ptr, p1_ptr);
     }
 
     // For test_truncate_zero_extend_tensor_2d
@@ -143,9 +109,9 @@ int main() {
             r_msb.data()[i] = r_m.data()[i].template get_msb<BW, F, K>();
             // std::cout << "r_msb_val: " << r_msb.data()[i].val << std::endl;
         }
-        write_shares_to_buffers(r_m);
-        write_shares_to_buffers(r_e);
-        write_shares_to_buffers(r_msb);
+        secret_share_and_write_tensor(r_m, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(r_e, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(r_msb, p0_ptr, p1_ptr);
     }
 
     // For test_truncate_zero_extend_tensor_3d
@@ -161,9 +127,9 @@ int main() {
             r_msb.data()[i] = r_m.data()[i].template get_msb<BW, F, K>();
         }
         
-        write_shares_to_buffers(r_m);
-        write_shares_to_buffers(r_e);
-        write_shares_to_buffers(r_msb);
+        secret_share_and_write_tensor(r_m, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(r_e, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(r_msb, p0_ptr, p1_ptr);
     }
 
     // For test_elementwise_mul_opt
@@ -196,19 +162,26 @@ int main() {
         R_XMSB_Y = R_X_MSB * R_Y_N;
         R_XMSB_YMSB = R_X_MSB * R_Y_MSB;
 
-        write_shares_to_buffers(R_X);
-        write_shares_to_buffers(R_Y);
-        write_shares_to_buffers(R_X_N);
-        write_shares_to_buffers(R_Y_N);
-        write_shares_to_buffers(R_X_MSB);
-        write_shares_to_buffers(R_Y_MSB);
-        write_shares_to_buffers(R_XY);
-        write_shares_to_buffers(R_X_RYMSB);
-        write_shares_to_buffers(R_XMSB_Y);
-        write_shares_to_buffers(R_XMSB_YMSB);
+        secret_share_and_write_tensor(R_X, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_Y, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_X_N, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_Y_N, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_X_MSB, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_Y_MSB, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_XY, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_X_RYMSB, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_XMSB_Y, p0_ptr, p1_ptr);
+        secret_share_and_write_tensor(R_XMSB_YMSB, p0_ptr, p1_ptr);
+    }
+
+    // For FC Layer Test
+    {
+        fc_layer.dealer_generate_randomness(p0_ptr, p1_ptr);
     }
 
     // 4. Assert that we wrote the exact calculated size
+    size_t p0_offset = p0_ptr - p0_data;
+    size_t p1_offset = p1_ptr - p1_data;
     assert(p0_offset == total_size);
     assert(p1_offset == total_size);
 

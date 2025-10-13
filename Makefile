@@ -2,9 +2,16 @@ CXX=g++
 CXXFLAGS=-std=c++17 -pthread -I./utils -I./mpc -I./ -I/usr/include/eigen3
 LDFLAGS=-pthread
 
-.PHONY: all clean test-fc test-primitives
+.PHONY: all clean test-fc test-primitives test-fc-new
 
 all: test/dealer test/mpc/test_mpc_primitives
+
+test-fc-new: test/dealer_fc test/nn/test_fc
+	@mkdir -p randomness/P0 randomness/P1
+	@./test/dealer_fc
+	@sleep 1
+	@./test/nn/test_fc 0 & ./test/nn/test_fc 1
+	@wait
 
 test-fc: test/dealer test/nn/test_fc
 	@mkdir -p randomness/P0 randomness/P1
@@ -19,6 +26,18 @@ test-primitives: test/dealer test/mpc/test_mpc_primitives
 	@sleep 1
 	@./test/mpc/test_mpc_primitives 0 & ./test/mpc/test_mpc_primitives 1
 	@wait
+
+test/nn/test_fc: test/nn/test_fc.o mpc/mpc.o utils/comm.o
+	$(CXX) $(LDFLAGS) -o $@ $^
+	
+test/dealer_fc: test/dealer_fc.o mpc/mpc.o
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+test/nn/test_fc.o: test/nn/test_fc.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+test/dealer_fc.o: test/dealer_fc.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test/mpc/test_mpc_primitives: test/mpc/test_mpc_primitives.o mpc/mpc.o utils/comm.o
 	$(CXX) $(LDFLAGS) -o $@ $^
@@ -36,4 +55,4 @@ test/dealer.o: test/dealer.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f test/dealer test/utils/test_comm test/mpc/test_mpc_primitives test/nn/test_fc utils/*.o mpc/*.o test/mpc/*.o test/nn/*.o test/*.o
+	rm -f test/dealer test/dealer_fc test/utils/test_comm test/mpc/test_mpc_primitives test/nn/test_fc utils/*.o mpc/*.o test/mpc/*.o test/nn/*.o test/*.o

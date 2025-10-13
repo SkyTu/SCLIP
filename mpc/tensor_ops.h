@@ -4,6 +4,17 @@
 #include "fix_tensor.h"
 #include <cassert>
 
+// New truncate function that preserves bitwidth
+template <typename T, int bw, int f, int k, int Rank, int Options>
+FixTensor<T, bw, f, k, Rank, Options>
+truncate_tensor(const FixTensor<T, bw, f, k, Rank, Options>& x_share) {
+    FixTensor<T, bw, f, k, Rank, Options> result(x_share.dimensions());
+    for (long long i = 0; i < x_share.size(); ++i) {
+        result.data()[i] = Fix<T, bw, f, k>(static_cast<T>(x_share.data()[i].val >> f));
+    }
+    return result;
+}
+
 // Manual implementation of 2D x 2D tensor contraction (Matrix Multiplication)
 // C(m, q) = A(m, n) * B(n, q)
 template <typename T, int bw, int f, int k, int Options>
