@@ -6,8 +6,30 @@
 #include "mpc/mpc.h"
 #include "utils/random.h"
 
-template <typename T, int smallBW, int BW, int F, int K>
-void generate_zero_extend_randomness(FixTensor<T, smallBW, F, K, 2>& r_m_plain, FixTensor<T, BW, F, K, 2>& r_e_plain, FixTensor<T, BW, F, K, 2>& r_msb_plain){
+template <typename T, int smallBW, int BW, int F, int K, int Rank>
+int get_zero_extend_random_size(int batch, int row, int col){
+    if(Rank == 3){
+        return (batch * row * col + batch * row * col + batch * row * col) * sizeof(T);
+    }else{
+        return (row * col + row * col + row * col) * sizeof(T);
+    }
+}
+
+template <typename T, int smallBW, int BW, int F, int K, int Rank>
+void generate_zero_extend_randomness(int batch, int row, int col, uint8_t * p0_ptr, uint8_t * p1_ptr){
+    assert(Rank == 2 || Rank == 3);
+    FixTensor<T, smallBW, F, K, Rank>& r_m_plain;
+    FixTensor<T, BW, F, K, Rank>& r_e_plain;
+    FixTensor<T, BW, F, K, Rank>& r_msb_plain;
+    if(Rank == 3){
+        r_m_plain = FixTensor<T, smallBW, F, K, 3>(batch, row, col);
+        r_e_plain = FixTensor<T, BW, F, K, 3>(batch, row, col);
+        r_msb_plain = FixTensor<T, BW, F, K, 3>(batch, row, col);
+    }else{
+        r_m_plain = FixTensor<T, smallBW, F, K, Rank>(row, col);
+        r_e_plain = FixTensor<T, BW, F, K, Rank>(row, col);
+        r_msb_plain = FixTensor<T, BW, F, K, Rank>(row, col);
+    }
     // For SGD zero_extend
     Random random_gen;
     auto val = random_gen.template randomGE<T>(r_m_plain.size(), smallBW);
@@ -17,6 +39,10 @@ void generate_zero_extend_randomness(FixTensor<T, smallBW, F, K, 2>& r_m_plain, 
         // std::cout << "r_e_val: " << r_e.data()[i].val << std::endl;
         r_msb_plain.data()[i] = r_m_plain.data()[i].template get_msb<BW, F, K>();
     }
+    secret_share_and_write_tensor(r_m_plain, p0_ptr, p1_ptr);
+    secret_share_and_write_tensor(r_e_plain, p0_ptr, p1_ptr);
+    secret_share_and_write_tensor(r_msb_plain, p0_ptr, p1_ptr);
+    return;
 }
 
 template <typename T, int bw, int f, int k>

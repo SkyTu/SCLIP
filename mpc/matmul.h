@@ -7,10 +7,42 @@
 #include "utils/random.h"
 
 template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
-void generate_matmul_randomness(FixTensor<T, bw, f, k, RankU>& U, FixTensor<T, bw, f, k, RankV>& V, FixTensor<T, bw, f, k, RankZ>& Z){
+int get_matmul_random_size(int m, int n, int q, int B = -1){
+    if (RankU == 3){
+        assert(B != -1);
+        return (B * m * n + B * n * q + B * m * q) * sizeof(T);
+    }
+    else{
+        return (m * n + n * q + m * q) * sizeof(T);
+    }
+}
+
+template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
+void generate_matmul_randomness(uint8_t * p0_ptr, uint8_t * p1_ptr, int m, int n, int q, int B = -1){
+    FixTensor<T, bw, f, k, RankU> U;
+    FixTensor<T, bw, f, k, RankV> V;
+    FixTensor<T, bw, f, k, RankZ> Z;
+    if (RankU == 3){
+        assert(B != -1);
+        U = FixTensor<T, bw, f, k, 3>(B, m, n);
+    }
+    else{
+        U = FixTensor<T, bw, f, k, RankU>(m, n);
+    }
+    V = FixTensor<T, bw, f, k, RankV>(n, q);
+    if (RankZ == 3){
+        Z = FixTensor<T, bw, f, k, 3>(B, m, q);
+    }
+    else{
+        Z = FixTensor<T, bw, f, k, RankZ>(m, q);
+    }
+    
     U.initialize();
     V.initialize();
     Z = tensor_mul(U, V);
+    secret_share_and_write_tensor(U, p0_ptr, p1_ptr);
+    secret_share_and_write_tensor(V, p0_ptr, p1_ptr);
+    secret_share_and_write_tensor(Z, p0_ptr, p1_ptr);
     return;
 }
 

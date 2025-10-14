@@ -1,5 +1,6 @@
 #include "mpc/mpc.h"
 #include "mpc/truncate.h"
+#include "mpc/elementwise_mul.h"
 #include "mpc/matmul.h"
 #include <iostream>
 #include <cassert>
@@ -304,7 +305,7 @@ void test_elementwise_mul_opt(MPC& mpc) {
     // 3. Pre-generated randomness from buffer
     FixTensorM r_x_m_share(D1,D2), r_y_m_share(D1,D2);
     FixTensorN r_x_n_share(D1,D2), r_y_n_share(D1,D2), r_x_msb_share(D1,D2), r_y_msb_share(D1,D2);
-    FixTensorN r_xy_share(D1,D2), r_x_rymsb_share(D1,D2), r_xmsb_y_share(D1,D2), r_xmsb_ymsb_share(D1,D2);
+    FixTensorN r_xy_share(D1,D2), r_x_rymsb_share(D1,D2), r_xmsb_y_share(D1,D2);
 
     mpc.read_fixtensor_share(r_x_m_share);
     mpc.read_fixtensor_share(r_y_m_share);
@@ -315,13 +316,12 @@ void test_elementwise_mul_opt(MPC& mpc) {
     mpc.read_fixtensor_share(r_xy_share);
     mpc.read_fixtensor_share(r_x_rymsb_share);
     mpc.read_fixtensor_share(r_xmsb_y_share);
-    mpc.read_fixtensor_share(r_xmsb_ymsb_share);
 
     // 4. Secure computation
     FixTensorN c_n_share = elementwise_mul_opt<uint64_t, M_BITS, F, K, BW, 2, Eigen::RowMajor>(a_m_share, b_m_share, 
         r_x_m_share, r_x_n_share, r_x_msb_share,
         r_y_m_share, r_y_n_share, r_y_msb_share,
-        r_xy_share, r_xmsb_y_share, r_x_rymsb_share, r_xmsb_ymsb_share);
+        r_xy_share, r_xmsb_y_share, r_x_rymsb_share);
 
     // 5. Reconstruction and Verification
     FixTensorN C = reconstruct_tensor(c_n_share);
