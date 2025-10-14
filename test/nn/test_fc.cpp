@@ -2,6 +2,7 @@
 #include "mpc/mpc.h"
 #include "mpc/truncate.h"
 #include "mpc/tensor_ops.h"
+#include "utils/config.h"
 #include <iostream>
 #include <vector>
 #include <cassert>
@@ -92,7 +93,6 @@ void test_fc(MPC& mpc) {
     // test for backward propagation
     using IncomingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::IncomingGradTensor;
     using OutgoingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::OutgoingGradTensor;
-    const float lr = 0.01;
 
     // 2. Load backward pass randomness (now unified)
     mpc.load_random_data("./randomness/P" + std::to_string(mpc.party) + "/fc_bwd_random.bin");
@@ -108,7 +108,7 @@ void test_fc(MPC& mpc) {
 
     // 4. Execute Backward Pass and SGD Update
     auto outgoing_grad_share = fc_layer.backward(incoming_grad_share);
-    fc_layer.update(lr);
+    fc_layer.update(LR);
 
     // 5. Reconstruct results for verification
     auto outgoing_grad_reconstructed = reconstruct_tensor(outgoing_grad_share);
@@ -156,7 +156,7 @@ void test_fc(MPC& mpc) {
         WeightTensor x_plain_sum_T = x_plain_sum_T_expr;
         auto expected_dW_wide = tensor_mul(x_plain_sum_T, incoming_grad_plain);
 
-        float scaled_lr = lr / params.B;
+        float scaled_lr = LR / params.B;
         auto update_term_wide_expr = expected_dW_wide * FixIn(scaled_lr);
         WeightTensor update_term_wide = update_term_wide_expr;
         auto update_term_trunc = truncate_reduce_tensor(update_term_wide);
