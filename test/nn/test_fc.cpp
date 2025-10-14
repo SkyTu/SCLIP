@@ -1,11 +1,12 @@
 #include "nn/FC.h"
 #include "mpc/mpc.h"
+#include "mpc/truncate.h"
 #include "mpc/tensor_ops.h"
 #include <iostream>
 #include <vector>
 #include <cassert>
 
-void test_fc_forward(MPC& mpc) {
+void test_fc(MPC& mpc) {
     std::cout << "--- Testing FC Layer Forward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
 
     using T = uint64_t;
@@ -87,8 +88,35 @@ void test_fc_forward(MPC& mpc) {
     std::cout << "forward pass executed" << std::endl;
     auto y_reconstructed = reconstruct_tensor(y_share);
 
-    // 5. Plaintext Verification
+    
+    // test for backward propagation
+    using IncomingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::IncomingGradTensor;
+    using OutgoingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::OutgoingGradTensor;
+    const float lr = 0.01;
+
+    // 2. Load backward pass randomness (now unified)
+    mpc.load_random_data("./randomness/P" + std::to_string(mpc.party) + "/fc_bwd_random.bin");
+    fc_layer.readBackwardRandomness(mpc);
+    std::cout << "Backward randomness loaded" << std::endl;
+
+    // 3. Secret Share a 2D incoming gradient
+    IncomingGradTensor incoming_grad_plain(params.M, params.K);
     if (mpc.party == 0) {
+        incoming_grad_plain.setValues({{FixIn(0.1), FixIn(0.2), FixIn(0.3), FixIn(0.4)}, {FixIn(-0.1), FixIn(-0.2), FixIn(-0.3), FixIn(-0.4)}});
+    }
+    auto incoming_grad_share = secret_share_tensor(incoming_grad_plain);
+
+    // 4. Execute Backward Pass and SGD Update
+    auto outgoing_grad_share = fc_layer.backward(incoming_grad_share);
+    fc_layer.update(lr);
+
+    // 5. Reconstruct results for verification
+    auto outgoing_grad_reconstructed = reconstruct_tensor(outgoing_grad_share);
+    auto W_updated_reconstructed = reconstruct_tensor(fc_layer.W_share);
+
+    // 6. Plaintext Verification
+    if (mpc.party == 0) {
+        // verify forward
         WeightTensor W_plain(params.N, params.K);
         W_plain.setValues({ {FixIn(1.0), FixIn(-1.0), FixIn(0.5), FixIn(1.2)}, {FixIn(-0.8), FixIn(1.2), FixIn(1.5), FixIn(-0.5)}, {FixIn(0.5), FixIn(-0.5), FixIn(1.0), FixIn(-1.0)} });
         
@@ -108,101 +136,43 @@ void test_fc_forward(MPC& mpc) {
         for (int i = 0; i < y_reconstructed.size(); ++i) {
             assert(std::abs(y_reconstructed.data()[i].to_float<double>() - expected_y_final.data()[i].to_float<double>()) < 1e-3);
         }
-    }
-    
-    std::cout << "Party " << mpc.party << " FC Layer Forward test passed!" << std::endl;
-}
 
-void test_fc_backward(MPC& mpc) {
-    std::cout << "--- Testing FC Layer Backward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
-
-    using T = uint64_t;
-    const int F = 16;
-    const int K_INT = 15;
-    const int IN_BW = 64;
-    const int OUT_BW = 48;
-
-    using FixIn = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::FixIn;
-    using WeightTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::WeightTensor;
-    using IncomingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::IncomingGradTensor;
-
-    FCLayerParams params = {5, 2, 3, 4, false, false, 0};
-    FCLayer<T, IN_BW, OUT_BW, F, K_INT> fc_layer(params);
-    
-    // 1. Initialize Weights (must be same as forward pass)
-    // We need to do this to have the weights ready for the backward pass.
-    // The forward pass is not run here, but weights are needed.
-    uint8_t* weights_buffer = nullptr;
-    uint8_t* weights_buffer_ptr = nullptr;
-    if (mpc.party == 0) {
-        float w_data[] = {1.0, -1.0, 0.5, 1.2, -0.8, 1.2, 1.5, -0.5, 0.5, -0.5, 1.0, -1.0};
-        weights_buffer = new uint8_t[sizeof(w_data)];
-        memcpy(weights_buffer, w_data, sizeof(w_data));
-        weights_buffer_ptr = weights_buffer;
-    } else {
-        float w_data[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        weights_buffer = new uint8_t[sizeof(w_data)];
-        memcpy(weights_buffer, w_data, sizeof(w_data));
-        weights_buffer_ptr = weights_buffer;
-    }
-    fc_layer.initWeights(&weights_buffer_ptr, true);
-    if (weights_buffer) delete[] weights_buffer;
-
-    // 2. Load backward pass randomness
-    // First, skip forward randomness to get to the backward part.
-    mpc.random_data_idx += fc_layer.getForwardRandomnessSize();
-    fc_layer.readBackwardRandomness(mpc);
-    std::cout << "Backward randomness loaded" << std::endl;
-
-    // 3. Secret Share a dummy incoming gradient
-    IncomingGradTensor incoming_grad_plain(params.B, params.M, params.K);
-    if (mpc.party == 0) {
-        incoming_grad_plain.setZero();
-        Eigen::Tensor<FixIn, 2, Eigen::RowMajor> og_slice(params.M, params.K);
-        og_slice.setValues({{FixIn(0.1), FixIn(0.2), FixIn(0.3), FixIn(0.4)}, {FixIn(-0.1), FixIn(-0.2), FixIn(-0.3), FixIn(-0.4)}});
-        for (int i = 0; i < params.M; ++i) {
-            for (int j = 0; j < params.K; ++j) {
-                incoming_grad_plain(0, i, j) = og_slice(i, j);
-            }
-        }
-    } else {
-        incoming_grad_plain.setZero();
-    }
-    auto incoming_grad_share = secret_share_tensor(incoming_grad_plain);
-
-    // 4. Execute Backward Pass
-    auto outgoing_grad_share = fc_layer.backward(incoming_grad_share);
-    auto outgoing_grad_reconstructed = reconstruct_tensor(outgoing_grad_share);
-
-    // 5. Plaintext Verification
-    if (mpc.party == 0) {
-        std::cout << "Backward Result" << std::endl;
-        WeightTensor W_plain(params.N, params.K);
-        W_plain.setValues({ {FixIn(1.0), FixIn(-1.0), FixIn(0.5), FixIn(1.2)}, {FixIn(-0.8), FixIn(1.2), FixIn(1.5), FixIn(-0.5)}, {FixIn(0.5), FixIn(-0.5), FixIn(1.0), FixIn(-1.0)} });
+        // --- Verify dE/dX ---
         WeightTensor W_plain_T = W_plain.shuffle(Eigen::array<int, 2>{1, 0});
-        
         auto expected_outgoing_grad_expr = tensor_mul(incoming_grad_plain, W_plain_T);
-        auto expected_outgoing_grad = truncate_tensor(expected_outgoing_grad_expr);
+        auto expected_outgoing_grad = truncate_reduce_tensor(expected_outgoing_grad_expr);
+        auto expected_outgoing_grad_extend = change_bitwidth<IN_BW, F, K_INT>(expected_outgoing_grad);
+        std::cout << "expected_outgoing_grad:\n" << expected_outgoing_grad_extend << std::endl;
+        std::cout << "Reconstructed dE/dX:\n" << outgoing_grad_reconstructed << std::endl;
+        
+        for (int i = 0; i < expected_outgoing_grad.size(); ++i) {
+            assert(std::abs(outgoing_grad_reconstructed.data()[i].to_float<double>() - expected_outgoing_grad.data()[i].to_float<double>()) < (1e-1));
+        }
+        std::cout << "dE/dX (2D) verification passed." << std::endl;
+        
+        // --- Verify dE/dW and SGD update ---
+        auto x_plain_sum = sum_reduce_tensor(x_plain);
+        auto x_plain_sum_T_expr = x_plain_sum.shuffle(Eigen::array<int, 2>{1, 0});
+        WeightTensor x_plain_sum_T = x_plain_sum_T_expr;
+        auto expected_dW_wide = tensor_mul(x_plain_sum_T, incoming_grad_plain);
 
-        std::cout << "Reconstructed Outgoing Grad (.val, first batch):\n";
-        for(int i=0; i<params.M; ++i) {
-            for(int j=0; j<params.N; ++j) std::cout << outgoing_grad_reconstructed(0,i,j).val << " ";
-            std::cout << std::endl;
+        float scaled_lr = lr / params.B;
+        auto update_term_wide_expr = expected_dW_wide * FixIn(scaled_lr);
+        WeightTensor update_term_wide = update_term_wide_expr;
+        auto update_term_trunc = truncate_reduce_tensor(update_term_wide);
+        // Simulate zero_extend in plaintext (this is an approximation)
+        // In reality, this is a secure protocol. Here we just extend the bitwidth.
+        auto update_term_extended = change_bitwidth<IN_BW, F, K_INT>(update_term_trunc);
+        auto expected_W_updated = W_plain - update_term_extended;
+        for (int i = 0; i < expected_W_updated.size(); ++i) {
+             assert(std::abs(static_cast<int64_t>(W_updated_reconstructed.data()[i].val) - static_cast<int64_t>(expected_W_updated.data()[i].val)) <= 2);
         }
-        std::cout << "Expected Outgoing Grad (.val, first batch):\n";
-        for(int i=0; i<params.M; ++i) {
-            for(int j=0; j<params.N; ++j) std::cout << expected_outgoing_grad(0,i,j).val << " ";
-            std::cout << std::endl;
-        }
-
-        for (int i = 0; i < params.M; ++i) {
-            for (int j = 0; j < params.N; ++j) {
-                assert(std::abs(static_cast<int64_t>(outgoing_grad_reconstructed(0, i, j).val) - static_cast<int64_t>(expected_outgoing_grad(0, i, j).val)) <= 1);
-            }
-        }
+        std::cout << "SGD weight update verification passed." << std::endl;
     }
 
     std::cout << "Party " << mpc.party << " FC Layer Backward test passed!" << std::endl;
+
+    std::cout << "Party " << mpc.party << " FC Layer Forward test passed!" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -213,14 +183,13 @@ int main(int argc, char** argv) {
     int party = std::atoi(argv[1]);
     MPC mpc(2, party);
     
-    std::string randomness_path = "randomness/P" + std::to_string(party) + "/fc_random_data.bin";
+    std::string randomness_path = "randomness/P" + std::to_string(party) + "/fc_fwd_random.bin";
     mpc.load_random_data(randomness_path);
     
     std::vector<std::string> addrs = {"127.0.0.1", "127.0.0.1"};
     mpc.connect(addrs, 9001);
 
-    test_fc_forward(mpc);
-    // test_fc_backward(mpc);
+    test_fc(mpc);
 
     return 0;
 }

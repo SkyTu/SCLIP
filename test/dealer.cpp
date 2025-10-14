@@ -5,6 +5,7 @@
 #include "mpc/fix_tensor.h"
 #include "utils/random.h"
 #include "mpc/tensor_ops.h"
+#include "mpc/matmul.h"
 #include "nn/FC.h"
 
 
@@ -66,9 +67,10 @@ int main() {
 
     // For test_secure_matmul (2D)
     {
-        FixTensor<T, BW, F, K, 2> U(2, 3); U.initialize();
-        FixTensor<T, BW, F, K, 2> V(3, 2); V.initialize();
-        FixTensor<T, BW, F, K, 2> Z = tensor_mul(U, V);
+        FixTensor<T, BW, F, K, 2> U(2, 3);
+        FixTensor<T, BW, F, K, 2> V(3, 2);
+        FixTensor<T, BW, F, K, 2> Z(2, 2);
+        generate_matmul_randomness<T, BW, F, K, 2, 2, 2>(U, V, Z);
         secret_share_and_write_tensor(U, p0_ptr, p1_ptr);
         secret_share_and_write_tensor(V, p0_ptr, p1_ptr);
         secret_share_and_write_tensor(Z, p0_ptr, p1_ptr);

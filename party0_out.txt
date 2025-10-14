@@ -1,0 +1,63 @@
+[Party 0] Listening for Party 1 on port 9002...
+[Party 0] <-> [Party 1] connection established.
+--- Testing FC Layer Forward Pass for Party 0/2 ---
+FC Layer initialized
+Initializing Weights
+Weights initialized
+Loading Randomness
+Randomness loaded
+execute forward pass
+x_reconstructed(0): 18446744065262817208
+x_reconstructed(1): 6406727204
+x_reconstructed(2): 18446744069401190082
+x_reconstructed(3): 18446744058315011004
+x_reconstructed(4): 18446744067684038100
+x_reconstructed(5): 3782129003
+x_reconstructed(6): 25279408747
+x_reconstructed(7): 19002635019
+x_reconstructed(8): 18446744069121065311
+x_reconstructed(9): 18446744056845281135
+x_reconstructed(10): 23515933357
+x_reconstructed(11): 18446744062534821870
+x_reconstructed(12): 18446744067883128575
+x_reconstructed(13): 18446744069363845952
+x_reconstructed(14): 18446744055013324331
+x_reconstructed(15): 18446744061970045416
+x_reconstructed(16): 18446744067552440980
+x_reconstructed(17): 16139977996
+x_reconstructed(18): 18446744068391151651
+x_reconstructed(19): 18446744067399240696
+x_reconstructed(20): 18446744066850038370
+x_reconstructed(21): 18446744055618880696
+x_reconstructed(22): 18446744048488381865
+x_reconstructed(23): 6281965984
+x_reconstructed(24): 18446744040071868437
+x_reconstructed(25): 18446744059603624744
+x_reconstructed(26): 19344767017
+x_reconstructed(27): 5384447667
+x_reconstructed(28): 7802913376
+x_reconstructed(29): 18446744062216323314
+forward pass executed
+Forward Result
+Reconstructed Output:
+     2.04997     -2.45001     0.249985    -0.400024     -5.49998      6.49997    -0.250015    -0.650009
+-1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05
+-1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05
+-1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05
+-1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05 -1.52588e-05
+Expected Output:
+  2.04999     -2.45      0.25 -0.400009  -5.49997   6.49998     -0.25 -0.649994
+        0         0         0         0         0         0         0         0
+        0         0         0         0         0         0         0         0
+        0         0         0         0         0         0         0         0
+        0         0         0         0         0         0         0         0
+Party 0 FC Layer Forward test passed!
+--- Testing FC Layer Backward Pass for Party 0/2 ---
+Backward randomness loaded
+Reconstructed dE/dX:
+ -2.4878e+08  1.25146e+09 -4.56185e+07
+-4.46624e+08   4.0239e+07  1.27145e+09
+Expected dE/dX:
+ 0.529968  0.409988 -0.150009
+-0.529984 -0.410004  0.150009
+test_fc: test/nn/test_fc.cpp:207: void test_fc_backward(MPC&): Assertion `std::abs(static_cast<int64_t>(outgoing_grad_reconstructed.data()[i].val) - static_cast<int64_t>(expected_outgoing_grad.data()[i].val)) <= 1' failed.

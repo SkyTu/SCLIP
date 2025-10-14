@@ -1,4 +1,5 @@
 #include "mpc/fix_tensor.h"
+#include "mpc/truncate.h"
 #include "mpc/tensor_ops.h"
 #include <iostream>
 #include <cassert>

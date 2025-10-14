@@ -3,7 +3,10 @@
 #include "mpc/mpc.h"
 #include "mpc/fix_tensor.h"
 #include "mpc/tensor_ops.h"
+#include "mpc/truncate.h"
+#include "mpc/matmul.h"
 #include "utils/random.h"
+#include "nn/SGD.h"
 
 // A struct to hold all the dimension and configuration parameters for the FC layer.
 struct FCLayerParams {
@@ -27,9 +30,11 @@ public:
     using WeightTensor = FixTensor<T, IN_BW, F, K_INT, 2>;
     using BiasTensor = FixTensor<T, IN_BW, F, K_INT, 1>; // Use the new FixBias type
     using OutputTensor3D = FixTensor<T, OUT_BW, F, K_INT, 3>;
-    using IncomingGradTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
-    using OutgoingGradTensor = FixTensor<T, IN_BW, F, K_INT, 3>;
+    using IncomingGradTensor = FixTensor<T, IN_BW, F, K_INT, 2>; // 2D
+    using OutgoingGradTensor = FixTensor<T, IN_BW, F, K_INT, 2>; // MUST ALSO BE 2D
 
+    // Type definition for the truncated update term in SGD
+    using TruncatedGradTensor = FixTensor<T, IN_BW - F, F, K_INT, 2>;
 
     FCLayerParams p;
     WeightTensor W_share; // Secret share of the weight matrix
@@ -42,12 +47,24 @@ public:
     FixTensor<T, IN_BW, F, K_INT, 3> Z_fwd;
     
     // Member variables to store randomness for the backward pass
-    IncomingGradTensor U_bwd;
+    IncomingGradTensor U_bwd; // 2D, corresponds to dE/dY
     WeightTensor V_bwd; // This is W^T, so its dimensions are KxN
-    OutgoingGradTensor Z_bwd;
+    OutgoingGradTensor Z_bwd; // 2D, corresponds to dE/dX
+
+    // Randomness for dE/dW calculation in backward pass
+    WeightTensor U_dw; // Corresponds to sum(X^T), so (N, M)
+    IncomingGradTensor V_dw; // Corresponds to dE/dY, so (M, K)
+    WeightTensor Z_dw; // Corresponds to dW, so (N, K)
 
     // To store the input share for the backward pass
     InputTensor input_share;
+    // To store the computed weight gradient share
+    WeightTensor dW_share;
+
+    // Randomness for the zero_extend protocol in sgd_update
+    TruncatedGradTensor r_m_share;
+    WeightTensor r_e_share;
+    WeightTensor r_msb_share;
 
 
 public:
@@ -167,20 +184,48 @@ public:
     // --- Backward Pass Randomness ---
     size_t getBackwardRandomnessSize() {
         size_t total_size = 0;
-        total_size += IncomingGradTensor(p.B, p.M, p.K).size() * sizeof(T); // U_bwd
-        total_size += WeightTensor(p.K, p.N).size() * sizeof(T);         // V_bwd (this is W^T)
-        total_size += OutgoingGradTensor(p.B, p.M, p.N).size() * sizeof(T); // Z_bwd
+        // For dE/dX (all 2D)
+        total_size += IncomingGradTensor(p.M, p.K).size() * sizeof(T);      // U_bwd
+        total_size += WeightTensor(p.K, p.N).size() * sizeof(T);          // V_bwd (this is W^T)
+        total_size += OutgoingGradTensor(p.M, p.N).size() * sizeof(T);     // Z_bwd
+        // For dE/dW
+        total_size += WeightTensor(p.N, p.M).size() * sizeof(T);           // U_dw
+        total_size += IncomingGradTensor(p.M, p.K).size() * sizeof(T);      // V_dw
+        total_size += WeightTensor(p.N, p.K).size() * sizeof(T);           // Z_dw
+        // For SGD zero_extend
+        constexpr int m = IN_BW - F;
+        total_size += FixTensor<T, m, F, K_INT, 2>(p.N, p.K).size() * sizeof(T);      // r_m_share
+        total_size += FixTensor<T, IN_BW, F, K_INT, 2>(p.N, p.K).size() * sizeof(T);  // r_e_share
+        total_size += FixTensor<T, IN_BW, F, K_INT, 2>(p.N, p.K).size() * sizeof(T);  // r_msb_share
         return total_size;
     }
 
     void dealer_generate_backward_randomness(uint8_t*& p0_buf, uint8_t*& p1_buf) {
-        IncomingGradTensor U(p.B, p.M, p.K); U.initialize();
-        WeightTensor V(p.K, p.N); V.initialize(); // V is KxN
+        // For dE/dX
+        IncomingGradTensor U_bwd_plain(p.M, p.K); 
+        WeightTensor V_bwd_plain(p.K, p.N); 
+        FixTensor<T, IN_BW, F, K_INT, 2> Z_bwd(p.M, p.N);
+        generate_matmul_randomness<T, IN_BW, F, K_INT, 2, 2, 2>(U_bwd_plain, V_bwd_plain, Z_bwd);
+                
+        secret_share_and_write_tensor(U_bwd_plain, p0_buf, p1_buf);
+        secret_share_and_write_tensor(V_bwd_plain, p0_buf, p1_buf);
+        secret_share_and_write_tensor(Z_bwd, p0_buf, p1_buf);
 
-        auto Z = tensor_mul(U, V);
-        secret_share_and_write_tensor(U, p0_buf, p1_buf);
-        secret_share_and_write_tensor(V, p0_buf, p1_buf);
-        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
+        // For dE/dW
+        WeightTensor U_dw_plain(p.N, p.M); U_dw_plain.initialize(K_INT);
+        IncomingGradTensor V_dw_plain(p.M, p.K); V_dw_plain.initialize(K_INT);
+        auto Z_dw = tensor_mul(U_dw_plain, V_dw_plain);
+        secret_share_and_write_tensor(U_dw_plain, p0_buf, p1_buf);
+        secret_share_and_write_tensor(V_dw_plain, p0_buf, p1_buf);
+        secret_share_and_write_tensor(Z_dw, p0_buf, p1_buf);
+
+        auto r_m_plain = FixTensor<T, IN_BW - F, F, K_INT, 2>(p.N, p.K);
+        auto r_e_plain = FixTensor<T, IN_BW, F, K_INT, 2>(p.N, p.K);
+        auto r_msb_plain = FixTensor<T, IN_BW, F, K_INT, 2>(p.N, p.K);
+        generate_zero_extend_randomness(r_m_plain, r_e_plain, r_msb_plain);
+        secret_share_and_write_tensor(r_m_plain, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_e_plain, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_msb_plain, p0_buf, p1_buf);
     }
     
     void readBackwardRandomness(MPC& mpc) {
@@ -198,13 +243,22 @@ public:
             random_data_ptr += size_in_bytes;
         };
 
-        read_tensor(U_bwd, Eigen::array<long, 3>{p.B, p.M, p.K});
+        read_tensor(U_bwd, Eigen::array<long, 2>{p.M, p.K});
         read_tensor(V_bwd, Eigen::array<long, 2>{p.K, p.N});
-        read_tensor(Z_bwd, Eigen::array<long, 3>{p.B, p.M, p.N});
+        read_tensor(Z_bwd, Eigen::array<long, 2>{p.M, p.N});
+
+        read_tensor(U_dw, Eigen::array<long, 2>{p.N, p.M});
+        read_tensor(V_dw, Eigen::array<long, 2>{p.M, p.K});
+        read_tensor(Z_dw, Eigen::array<long, 2>{p.N, p.K});
+
+        read_tensor(r_m_share, Eigen::array<long, 2>{p.N, p.K});
+        read_tensor(r_e_share, Eigen::array<long, 2>{p.N, p.K});
+        read_tensor(r_msb_share, Eigen::array<long, 2>{p.N, p.K});
 
         mpc.random_data_idx = random_data_ptr - mpc.random_data.data();
     }
     
+    // --- SGD Update Randomness ---
     // --- Forward and Backward Pass ---
 
     // Forward pass for non-batched input
@@ -235,13 +289,28 @@ public:
         // Transpose the weight matrix share
         WeightTensor W_share_T = W_share.shuffle(Eigen::array<int, 2>{1, 0});
         
-        // Secure MatMul: [dE/dX] = [dE/dY] * [W]^T
+        // --- 1. Calculate dE/dX (gradient to propagate backwards) ---
+        // All tensors are 2D. No broadcasting needed.
         auto outgoing_grad_share_wide = secure_matmul(incoming_grad_share, W_share_T, U_bwd, V_bwd, Z_bwd);
+        auto outgoing_grad_share = truncate_reduce_tensor(outgoing_grad_share_wide);
+        auto outgoing_grad_share_extend = zero_extend_tensor(outgoing_grad_share, r_m_share, r_e_share, r_msb_share);
 
-        auto trunc_share = truncate_reduce_tensor(outgoing_grad_share_wide);
-        std::cout << "trunc_share calculated " << std::endl;
-        // The result of the multiplication has 2*f fractional bits and needs to be truncated.
-        return trunc_share;
+        // --- 2. Calculate dE/dW (gradient for weight update) ---
+        auto input_share_sum = sum_reduce_tensor(this->input_share);
+        auto input_share_sum_T_expr = input_share_sum.shuffle(Eigen::array<int, 2>{1, 0});
+        WeightTensor input_share_sum_T = input_share_sum_T_expr;
+        
+        // incoming_grad_share is already the 2D "average" gradient, no reduction needed
+        auto dW_share_wide = secure_matmul(input_share_sum_T, incoming_grad_share, U_dw, V_dw, Z_dw);
+        dW_share = dW_share_wide; // No truncation here, done in sgd_update
+
+        return outgoing_grad_share_extend;
+    }
+
+    void update(float lr) {
+        // The division by batch size is folded into the learning rate
+        float scaled_lr = lr / p.B;
+        sgd_update(W_share, dW_share, FixIn(scaled_lr), r_m_share, r_e_share, r_msb_share);
     }
     
 };

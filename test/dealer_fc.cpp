@@ -3,9 +3,11 @@
 #include <vector>
 #include <cassert>
 #include "nn/FC.h"
+#include "mpc/mpc.h"
 #include "mpc/fix_tensor.h"
+#include "mpc/tensor_ops.h"
 
-int main() {
+void dealer_generate_fc_randomness() {
     std::cout << "FC Dealer starting..." << std::endl;
     
     // Create directories for randomness if they don't exist
@@ -22,49 +24,73 @@ int main() {
     FCLayerParams params_fc = {5, 2, 3, 4, false, false, 0};
     FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc> fc_layer(params_fc);
 
-    // 1. Calculate the size of randomness needed for the FC layer
-    size_t fwd_randomness_size = fc_layer.getForwardRandomnessSize();
-    size_t bwd_randomness_size = fc_layer.getBackwardRandomnessSize();
-    size_t total_randomness_size = fwd_randomness_size + bwd_randomness_size;
-    std::cout << "Total FC randomness size per party: " << total_randomness_size << " bytes." << std::endl;
+    // --- Generate Forward Randomness ---
+    size_t fwd_size = fc_layer.getForwardRandomnessSize();
+    std::cout << "Forward randomness size: " << fwd_size << " bytes" << std::endl;
+    uint8_t* p0_fwd_buf = new uint8_t[fwd_size];
+    uint8_t* p1_fwd_buf = new uint8_t[fwd_size];
+    uint8_t* p0_fwd_ptr = p0_fwd_buf;
+    uint8_t* p1_fwd_ptr = p1_fwd_buf;
+    FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc>::InputTensor U_fwd(params_fc.B, params_fc.M, params_fc.N); U_fwd.initialize(K_INT_fc);
+    FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc>::WeightTensor V_fwd(params_fc.N, params_fc.K); V_fwd.initialize(K_INT_fc);
+    fc_layer.dealer_generate_forward_randomness(p0_fwd_ptr, p1_fwd_ptr, U_fwd, V_fwd);
 
-    // 2. Allocate buffers for each party's share of the randomness
-    uint8_t* p0_data = new uint8_t[total_randomness_size];
-    uint8_t* p1_data = new uint8_t[total_randomness_size];
-    uint8_t* p0_ptr = p0_data;
-    uint8_t* p1_ptr = p1_data;
+    // --- Generate Backward Randomness (includes SGD randomness) ---
+    size_t bwd_size = fc_layer.getBackwardRandomnessSize();
+    std::cout << "Backward randomness size: " << bwd_size << " bytes" << std::endl;
+    uint8_t* p0_bwd_buf = new uint8_t[bwd_size];
+    uint8_t* p1_bwd_buf = new uint8_t[bwd_size];
+    uint8_t* p0_bwd_ptr = p0_bwd_buf;
+    uint8_t* p1_bwd_ptr = p1_bwd_buf;
+    fc_layer.dealer_generate_backward_randomness(p0_bwd_ptr, p1_bwd_ptr);
 
-    // 3. Generate the randomness and write the shares to the buffers
-    FixTensor<T_fc, IN_BW_fc, F_fc, K_INT_fc, 3> U(params_fc.B, params_fc.M, params_fc.N); U.initialize();
-    FixTensor<T_fc, IN_BW_fc, F_fc, K_INT_fc, 2> V(params_fc.N, params_fc.K); V.initialize();
-    fc_layer.dealer_generate_forward_randomness(p0_ptr, p1_ptr, U, V);
-    fc_layer.dealer_generate_backward_randomness(p0_ptr, p1_ptr);
-
-    // 4. Assert that we wrote the exact calculated size
-    assert(static_cast<size_t>(p0_ptr - p0_data) == total_randomness_size);
-    assert(static_cast<size_t>(p1_ptr - p1_data) == total_randomness_size);
-
-    // 5. Write the buffers to separate files for each party
-    std::ofstream p0_file("./randomness/P0/fc_random_data.bin", std::ios::binary);
-    if (!p0_file) {
+    // --- Write to files ---
+    std::string p0_fwd_path = "./randomness/P0/fc_fwd_random.bin";
+    std::string p1_fwd_path = "./randomness/P1/fc_fwd_random.bin";
+    std::ofstream p0_fwd_file(p0_fwd_path, std::ios::binary);
+    if (!p0_fwd_file) {
         std::cerr << "Error opening file for party 0." << std::endl;
-        return 1;
+        return; // Changed from return 1 to return
     }
-    p0_file.write(reinterpret_cast<const char*>(p0_data), total_randomness_size);
-    p0_file.close();
+    p0_fwd_file.write(reinterpret_cast<const char*>(p0_fwd_buf), fwd_size);
+    p0_fwd_file.close();
 
-    std::ofstream p1_file("./randomness/P1/fc_random_data.bin", std::ios::binary);
-    if (!p1_file) {
+    std::ofstream p1_fwd_file(p1_fwd_path, std::ios::binary);
+    if (!p1_fwd_file) {
         std::cerr << "Error opening file for party 1." << std::endl;
-        return 1;
+        return; // Changed from return 1 to return
     }
-    p1_file.write(reinterpret_cast<const char*>(p1_data), total_randomness_size);
-    p1_file.close();
+    p1_fwd_file.write(reinterpret_cast<const char*>(p1_fwd_buf), fwd_size);
+    p1_fwd_file.close();
+
+    std::string p0_bwd_path = "./randomness/P0/fc_bwd_random.bin";
+    std::string p1_bwd_path = "./randomness/P1/fc_bwd_random.bin";
+    std::ofstream p0_bwd_file(p0_bwd_path, std::ios::binary);
+    if (!p0_bwd_file) {
+        std::cerr << "Error opening file for party 0." << std::endl;
+        return; // Changed from return 1 to return
+    }
+    p0_bwd_file.write(reinterpret_cast<const char*>(p0_bwd_buf), bwd_size);
+    p0_bwd_file.close();
+
+    std::ofstream p1_bwd_file(p1_bwd_path, std::ios::binary);
+    if (!p1_bwd_file) {
+        std::cerr << "Error opening file for party 1." << std::endl;
+        return; // Changed from return 1 to return
+    }
+    p1_bwd_file.write(reinterpret_cast<const char*>(p1_bwd_buf), bwd_size);
+    p1_bwd_file.close();
 
     // 6. Clean up allocated memory
-    delete[] p0_data;
-    delete[] p1_data;
+    delete[] p0_fwd_buf;
+    delete[] p1_fwd_buf;
+    delete[] p0_bwd_buf;
+    delete[] p1_bwd_buf;
 
     std::cout << "FC Dealer finished successfully." << std::endl;
+}
+
+int main() {
+    dealer_generate_fc_randomness();
     return 0;
 }

@@ -1,4 +1,6 @@
 #include "mpc/mpc.h"
+#include "mpc/truncate.h"
+#include "mpc/matmul.h"
 #include <iostream>
 #include <cassert>
 

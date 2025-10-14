@@ -4,17 +4,6 @@
 #include "fix_tensor.h"
 #include <cassert>
 
-// New truncate function that preserves bitwidth
-template <typename T, int bw, int f, int k, int Rank, int Options>
-FixTensor<T, bw, f, k, Rank, Options>
-truncate_tensor(const FixTensor<T, bw, f, k, Rank, Options>& x_share) {
-    FixTensor<T, bw, f, k, Rank, Options> result(x_share.dimensions());
-    for (long long i = 0; i < x_share.size(); ++i) {
-        result.data()[i] = Fix<T, bw, f, k>(static_cast<T>(x_share.data()[i].val >> f));
-    }
-    return result;
-}
-
 // Manual implementation of 2D x 2D tensor contraction (Matrix Multiplication)
 // C(m, q) = A(m, n) * B(n, q)
 template <typename T, int bw, int f, int k, int Options>
@@ -100,6 +89,27 @@ get_msb(const FixTensor<T, bw, f, k, Rank, Options>& input) {
     FixTensor<T, new_bw, new_f, new_k, Rank, Options> result(input.dimensions());
     for (long long i = 0; i < input.size(); ++i) {
         result.data()[i] = input.data()[i].template get_msb<new_bw, new_f, new_k>();
+    }
+    return result;
+}
+
+// Sum-reduce a 3D tensor to a 2D tensor along the batch dimension (axis 0)
+template <typename T, int bw, int f, int k, int Options>
+FixTensor<T, bw, f, k, 2, Options>
+sum_reduce_tensor(const FixTensor<T, bw, f, k, 3, Options>& input) {
+    long long dim_batch = input.dimension(0);
+    long long dim_m = input.dimension(1);
+    long long dim_n = input.dimension(2);
+
+    FixTensor<T, bw, f, k, 2, Options> result(dim_m, dim_n);
+    result.setZero();
+
+    for (long long b = 0; b < dim_batch; ++b) {
+        for (long long i = 0; i < dim_m; ++i) {
+            for (long long j = 0; j < dim_n; ++j) {
+                result(i, j) += input(b, i, j);
+            }
+        }
     }
     return result;
 }
