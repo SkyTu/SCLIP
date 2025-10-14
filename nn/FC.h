@@ -212,9 +212,11 @@ public:
         secret_share_and_write_tensor(Z_bwd, p0_buf, p1_buf);
 
         // For dE/dW
-        WeightTensor U_dw_plain(p.N, p.M); U_dw_plain.initialize(K_INT);
-        IncomingGradTensor V_dw_plain(p.M, p.K); V_dw_plain.initialize(K_INT);
-        auto Z_dw = tensor_mul(U_dw_plain, V_dw_plain);
+        WeightTensor U_dw_plain(p.N, p.M); 
+        IncomingGradTensor V_dw_plain(p.M, p.K); 
+        FixTensor<T, IN_BW, F, K_INT, 2> Z_dw(p.N, p.K);
+        generate_matmul_randomness<T, IN_BW, F, K_INT, 2, 2, 2>(U_dw_plain, V_dw_plain, Z_dw);
+
         secret_share_and_write_tensor(U_dw_plain, p0_buf, p1_buf);
         secret_share_and_write_tensor(V_dw_plain, p0_buf, p1_buf);
         secret_share_and_write_tensor(Z_dw, p0_buf, p1_buf);
