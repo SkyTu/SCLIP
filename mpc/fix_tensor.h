@@ -12,6 +12,12 @@
 #include <iostream>
 #include <iomanip> // For std::setprecision
 
+struct Buffer {
+    uint8_t* ptr;
+    Buffer(uint8_t* p) : ptr(p) {}
+    void advance(size_t bytes) { ptr += bytes; }
+};
+
 // Forward declaration
 template <typename T, int bw, int f, int k, int Rank, int Options>
 class FixTensor;
@@ -277,38 +283,32 @@ std::pair<FixType, FixType> secret_share_into_two_scalar(const FixType& plaintex
 // Takes a plaintext tensor, shares it, and writes the raw .val of each share to the respective party's buffer.
 // The buffer pointers are advanced by this function.
 template<typename FixTensorType>
-void secret_share_and_write_tensor(const FixTensorType& plaintext, uint8_t*& p0_buf, uint8_t*& p1_buf) {
+void secret_share_and_write_tensor(const FixTensorType& plaintext, Buffer& p0_buf, Buffer& p1_buf) {
     auto [share0, share1] = secret_share_into_two(plaintext);
     
     using T = typename FixTensorType::Scalar::val_type;
     size_t num_elements = plaintext.size();
-    size_t size_bytes = num_elements * sizeof(T);
+    size_t size_bytes = num_elements * sizeof(typename FixTensorType::Scalar);
 
-    T* p0_dest = reinterpret_cast<T*>(p0_buf);
-    for(size_t i = 0; i < num_elements; ++i) {
-        p0_dest[i] = share0.data()[i].val;
-    }
-    p0_buf += size_bytes;
+    memcpy(p0_buf.ptr, share0.data(), size_bytes);
+    p0_buf.advance(size_bytes);
 
-    T* p1_dest = reinterpret_cast<T*>(p1_buf);
-    for(size_t i = 0; i < num_elements; ++i) {
-        p1_dest[i] = share1.data()[i].val;
-    }
-    p1_buf += size_bytes;
+    memcpy(p1_buf.ptr, share1.data(), size_bytes);
+    p1_buf.advance(size_bytes);
 }
 
 // Takes a plaintext scalar, shares it, and writes the raw .val of each share to the respective party's buffer.
 template<typename FixType>
-void secret_share_and_write_scalar(const FixType& plaintext, uint8_t*& p0_buf, uint8_t*& p1_buf) {
+void secret_share_and_write_scalar(const FixType& plaintext, Buffer& p0_buf, Buffer& p1_buf) {
     auto [share0, share1] = secret_share_into_two_scalar(plaintext);
     using T = typename FixType::val_type;
     size_t size_bytes = sizeof(T);
 
-    memcpy(p0_buf, &share0.val, size_bytes);
-    p0_buf += size_bytes;
+    memcpy(p0_buf.ptr, &share0.val, size_bytes);
+    p0_buf.advance(size_bytes);
 
-    memcpy(p1_buf, &share1.val, size_bytes);
-    p1_buf += size_bytes;
+    memcpy(p1_buf.ptr, &share1.val, size_bytes);
+    p1_buf.advance(size_bytes);
 }
 
 

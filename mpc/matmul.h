@@ -10,7 +10,7 @@ template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
 int get_matmul_random_size(int m, int n, int q, int B = -1){
     if (RankU == 3){
         assert(B != -1);
-        return (B * m * n + B * n * q + B * m * q) * sizeof(T);
+        return (B * m * n + n * q + B * m * q) * sizeof(T);
     }
     else{
         return (m * n + n * q + m * q) * sizeof(T);
@@ -18,32 +18,29 @@ int get_matmul_random_size(int m, int n, int q, int B = -1){
 }
 
 template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
-void generate_matmul_randomness(uint8_t * p0_ptr, uint8_t * p1_ptr, int m, int n, int q, int B = -1){
-    FixTensor<T, bw, f, k, RankU> U;
-    FixTensor<T, bw, f, k, RankV> V;
-    FixTensor<T, bw, f, k, RankZ> Z;
-    if (RankU == 3){
+void generate_matmul_randomness(Buffer& p0_buf, Buffer& p1_buf, int m, int n, int q, int B = -1){
+    if constexpr (RankU == 3) {
         assert(B != -1);
-        U = FixTensor<T, bw, f, k, 3>(B, m, n);
+        FixTensor<T, bw, f, k, RankU> U(B, m, n);
+        FixTensor<T, bw, f, k, RankV> V(n, q);
+        FixTensor<T, bw, f, k, RankZ> Z(B, m, q);
+        U.setRandom();
+        V.setRandom();
+        Z = tensor_mul(U, V);
+        secret_share_and_write_tensor(U, p0_buf, p1_buf);
+        secret_share_and_write_tensor(V, p0_buf, p1_buf);
+        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
+    } else {
+        FixTensor<T, bw, f, k, RankU> U(m, n);
+        FixTensor<T, bw, f, k, RankV> V(n, q);
+        FixTensor<T, bw, f, k, RankZ> Z(m, q);
+        U.setRandom();
+        V.setRandom();
+        Z = tensor_mul(U, V);
+        secret_share_and_write_tensor(U, p0_buf, p1_buf);
+        secret_share_and_write_tensor(V, p0_buf, p1_buf);
+        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
     }
-    else{
-        U = FixTensor<T, bw, f, k, RankU>(m, n);
-    }
-    V = FixTensor<T, bw, f, k, RankV>(n, q);
-    if (RankZ == 3){
-        Z = FixTensor<T, bw, f, k, 3>(B, m, q);
-    }
-    else{
-        Z = FixTensor<T, bw, f, k, RankZ>(m, q);
-    }
-    
-    U.initialize();
-    V.initialize();
-    Z = tensor_mul(U, V);
-    secret_share_and_write_tensor(U, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(V, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(Z, p0_ptr, p1_ptr);
-    return;
 }
 
 // Overload: secure_matmul with provided tensor Beaver triple shares (U,V,Z)

@@ -1,6 +1,7 @@
 #include "mpc/mpc.h"
 #include "mpc/truncate.h"
 #include "mpc/elementwise_mul.h"
+#include "mpc/square.h"
 #include "mpc/matmul.h"
 #include <iostream>
 #include <cassert>
@@ -336,10 +337,11 @@ void test_elementwise_mul_opt(MPC& mpc) {
         FixTensorN C_trunc = C;
         // C_trunc.trunc_in_place(F);
 
-        bool pass = true;
+        bool pass = true;  
+        std::cout << "test elementwise mul" << std::endl;
         for (int i = 0; i < D1; ++i) {
             for (int j = 0; j < D2; ++j) {
-                std::cout << A_n_plain(i,j).to_float<double>() << " " << B_n_plain(i,j).to_float<double>()  << " " << C_trunc(i,j).to_float<double>() << " " << expected_C(i,j).to_float<double>() << std::endl;
+                std::cout << C_trunc(i,j).to_float<double>() << " " << expected_C(i,j).to_float<double>() << std::endl;                
                 if (std::abs(C_trunc(i,j).template to_float<double>() - expected_C(i,j).template to_float<double>()) > 1e-1) {
                     std::cout << "C_trunc(i,j).to_float<double>() - expected_C(i,j).template to_float<double>() = " << C_trunc(i,j).val - expected_C(i,j).val << std::endl;
                     pass = false;
@@ -357,6 +359,89 @@ void test_elementwise_mul_opt(MPC& mpc) {
     mpc.print_stats();
 }
 
+void test_square_tensor_opt(MPC& mpc) {
+    std::cout << "\n--- Testing Square Tensor Opt for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    mpc.reset_stats();
+    if (mpc.M != 2) return;
+
+    constexpr int M_BITS = BW - F;
+    using FixTensorM = FixTensor<uint64_t, M_BITS, F, K, 2>;
+    using FixTensorBW = FixTensor<uint64_t, BW, F, K, 2>;
+
+    FixTensorM X_m_plain(3,4);
+    if (mpc.party == 0) {
+        X_m_plain.initialize(0, 16);
+    }
+    
+    FixTensorM X_m_share = secret_share_tensor(X_m_plain);
+    
+    FixTensorM r_m_share(3,4);
+    mpc.read_fixtensor_share(r_m_share);
+    FixTensorBW r_n_share(3,4);
+    mpc.read_fixtensor_share(r_n_share);
+    FixTensorBW r_square_share(3,4);
+    mpc.read_fixtensor_share(r_square_share);
+    FixTensorBW r_msb_share(3,4);
+    mpc.read_fixtensor_share(r_msb_share);
+    FixTensorBW r_r_msb_share(3,4);
+    mpc.read_fixtensor_share(r_r_msb_share);
+    
+    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(X_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
+    auto X_reconstructed = reconstruct_tensor(X_square_share);
+
+    FixTensorBW X_n_plain = change_bitwidth<BW, F, K>(X_m_plain);
+    FixTensorBW X_square_plain = X_n_plain * X_n_plain;
+
+    if (mpc.party == 0) {
+        for(int i=0; i<3; ++i) for(int j=0; j<4; ++j) {
+            std::cout << X_square_plain(i,j).to_float<double>() << " " << X_reconstructed(i,j).to_float<double>() << std::endl;
+        }
+        std::cout << "Party " << mpc.party << " Square Tensor Opt test passed!" << std::endl;
+    }
+    mpc.print_stats();
+}
+
+void test_square_tensor_opt_3d(MPC& mpc) {
+    std::cout << "\n--- Testing Square Tensor Opt 3D for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    mpc.reset_stats();
+    if (mpc.M != 2) return;
+
+    constexpr int M_BITS = BW - F;
+    using FixTensorM = FixTensor<uint64_t, M_BITS, F, K, 3>;
+    using FixTensorBW = FixTensor<uint64_t, BW, F, K, 3>;
+
+    FixTensorM X_m_plain(2,2,2);
+    if (mpc.party == 0) {
+        X_m_plain.initialize(0, 16);
+    }
+    
+    FixTensorM X_m_share = secret_share_tensor(X_m_plain);
+    
+    FixTensorM r_m_share(2,2,2);
+    mpc.read_fixtensor_share(r_m_share);
+    FixTensorBW r_n_share(2,2,2);
+    mpc.read_fixtensor_share(r_n_share);
+    FixTensorBW r_square_share(2,2,2);
+    mpc.read_fixtensor_share(r_square_share);
+    FixTensorBW r_msb_share(2,2,2);
+    mpc.read_fixtensor_share(r_msb_share);
+    FixTensorBW r_r_msb_share(2,2,2);
+    mpc.read_fixtensor_share(r_r_msb_share);
+
+    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
+    auto X_reconstructed = reconstruct_tensor(X_square_share);
+
+    FixTensorBW X_n_plain = change_bitwidth<BW, F, K>(X_m_plain);
+    FixTensorBW X_square_plain = X_n_plain * X_n_plain;
+
+    if (mpc.party == 0) {
+        for(int i=0; i<2; ++i) for(int j=0; j<2; ++j) for(int k=0; k<2; ++k) {
+            std::cout << X_square_plain(i,j,k).to_float<double>() << " " << X_reconstructed(i,j,k).to_float<double>() << std::endl;
+        }
+    }
+    std::cout << "Party " << mpc.party << " Square Tensor Opt 3D test passed!" << std::endl;
+    mpc.print_stats();
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -383,7 +468,8 @@ int main(int argc, char** argv) {
         test_truncate_zero_extend_tensor_2d(mpc);
         test_truncate_zero_extend_tensor_3d(mpc);
         test_elementwise_mul_opt(mpc); 
-
+        test_square_tensor_opt(mpc);
+        test_square_tensor_opt_3d(mpc);
         mpc.close();
 
     } catch (const std::exception& e) {

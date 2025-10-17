@@ -5,6 +5,7 @@
 #include "mpc/tensor_ops.h"
 #include "mpc/mpc.h"
 #include "utils/random.h"
+#include <iostream>
 
 template <typename T, int smallBW, int BW, int F, int K, int Rank>
 int get_zero_extend_random_size(int batch, int row, int col){
@@ -16,33 +17,27 @@ int get_zero_extend_random_size(int batch, int row, int col){
 }
 
 template <typename T, int smallBW, int BW, int F, int K, int Rank>
-void generate_zero_extend_randomness(int batch, int row, int col, uint8_t * p0_ptr, uint8_t * p1_ptr){
-    assert(Rank == 2 || Rank == 3);
-    FixTensor<T, smallBW, F, K, Rank>& r_m_plain;
-    FixTensor<T, BW, F, K, Rank>& r_e_plain;
-    FixTensor<T, BW, F, K, Rank>& r_msb_plain;
-    if(Rank == 3){
-        r_m_plain = FixTensor<T, smallBW, F, K, 3>(batch, row, col);
-        r_e_plain = FixTensor<T, BW, F, K, 3>(batch, row, col);
-        r_msb_plain = FixTensor<T, BW, F, K, 3>(batch, row, col);
-    }else{
-        r_m_plain = FixTensor<T, smallBW, F, K, Rank>(row, col);
-        r_e_plain = FixTensor<T, BW, F, K, Rank>(row, col);
-        r_msb_plain = FixTensor<T, BW, F, K, Rank>(row, col);
+void generate_zero_extend_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
+    FixTensor<T, smallBW, F, K, Rank> r_m;
+    FixTensor<T, BW, F, K, Rank> r_e;
+    FixTensor<T, BW, F, K, Rank> r_msb;
+
+    if constexpr (Rank == 3) {
+        r_m.resize(batch, row, col);
+        r_e.resize(batch, row, col);
+        r_msb.resize(batch, row, col);
+    } else {
+        r_m.resize(row, col);
+        r_e.resize(row, col);
+        r_msb.resize(row, col);
     }
-    // For SGD zero_extend
-    Random random_gen;
-    auto val = random_gen.template randomGE<T>(r_m_plain.size(), smallBW);
-    for(int i = 0; i < r_m_plain.size(); ++i) {
-        r_m_plain.data()[i] = Fix<T, smallBW, F, K>(val[i]);
-        r_e_plain.data()[i] = r_m_plain.data()[i];
-        // std::cout << "r_e_val: " << r_e.data()[i].val << std::endl;
-        r_msb_plain.data()[i] = r_m_plain.data()[i].template get_msb<BW, F, K>();
-    }
-    secret_share_and_write_tensor(r_m_plain, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(r_e_plain, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(r_msb_plain, p0_ptr, p1_ptr);
-    return;
+
+    r_m.setRandom();
+    r_e = extend_locally<BW, F, K>(r_m);
+    r_msb = get_msb<BW, F, K>(r_e);
+    secret_share_and_write_tensor(r_m, p0_buf, p1_buf);
+    secret_share_and_write_tensor(r_e, p0_buf, p1_buf);
+    secret_share_and_write_tensor(r_msb, p0_buf, p1_buf);
 }
 
 template <typename T, int bw, int f, int k>

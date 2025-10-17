@@ -9,11 +9,16 @@
 
 template <typename T, int m, int f, int k, int n, int Rank, int Options>
 int get_elementwise_mul_random_size(int batch, int row, int col){
+    size_t m_size = 0;
+    size_t n_size = 0;
     if(Rank == 3){
-        return (batch * row * col + n * row * col + n * row * col + n * row * col + n * row * col + n * row * col + n * row * col + n * row * col) * sizeof(T);
-    }else{
-        return (row * col + n * row * col + n * row * col + n * row * col + n * row * col + n * row * col + n * row * col + n * row * col) * sizeof(T);
+        m_size = batch * row * col * sizeof(T);
+        n_size = batch * row * col * sizeof(T);
+    } else {
+        m_size = row * col * sizeof(T);
+        n_size = row * col * sizeof(T);
     }
+    return 2 * m_size + 7 * n_size;
 }
 
 template <typename T, int m, int f, int k, int n, int Rank, int Options>
@@ -21,64 +26,57 @@ void generate_elementwise_mul_randomness(
     int batch,
     int row,
     int col,
-    uint8_t * p0_ptr,
-    uint8_t * p1_ptr
+    Buffer& p0_buf,
+    Buffer& p1_buf
 ){
-    FixTensor<T, m, f, k, Rank, Options>& R_X;
-    FixTensor<T, n, f, k, Rank, Options>& R_X_N;
-    FixTensor<T, n, f, k, Rank, Options>& R_X_MSB;
-    FixTensor<T, m, f, k, Rank, Options>& R_Y;
-    FixTensor<T, n, f, k, Rank, Options>& R_Y_N;
-    FixTensor<T, n, f, k, Rank, Options>& R_Y_MSB;
-    FixTensor<T, n, f, k, Rank, Options>& R_XY;
-    FixTensor<T, n, f, k, Rank, Options>& R_X_RYMSB;
-    FixTensor<T, n, f, k, Rank, Options>& R_XMSB_Y;
-    if(Rank == 3){
-        R_X = FixTensor<T, m, f, k, 3>(batch, row, col);
-        R_X_N = FixTensor<T, n, f, k, 3>(batch, row, col);
-        R_X_MSB = FixTensor<T, n, f, k, 3>(batch, row, col);
-        R_Y = FixTensor<T, m, f, k, 3>(batch, row, col);
-        R_Y_N = FixTensor<T, n, f, k, 3>(batch, row, col);
-        R_Y_MSB = FixTensor<T, n, f, k, 3>(batch, row, col);
-        R_XY = FixTensor<T, n, f, k, 3>(batch, row, col);
-    }else{
-        R_X = FixTensor<T, m, f, k, Rank>(row, col);
-        R_X_N = FixTensor<T, n, f, k, Rank>(row, col);
-        R_X_MSB = FixTensor<T, n, f, k, Rank>(row, col);
-        R_Y = FixTensor<T, m, f, k, Rank>(row, col);
-        R_Y_N = FixTensor<T, n, f, k, Rank>(row, col);
-        R_Y_MSB = FixTensor<T, n, f, k, Rank>(row, col);
-        R_XY = FixTensor<T, n, f, k, Rank>(row, col);
-        R_X_RYMSB = FixTensor<T, n, f, k, Rank>(row, col);
-        R_XMSB_Y = FixTensor<T, n, f, k, Rank>(row, col);
+    if constexpr (Rank == 3) {
+        FixTensor<T, m, f, k, Rank, Options> r_x_m(batch, row, col), r_y_m(batch, row, col);
+        FixTensor<T, n, f, k, Rank, Options> r_x_n(batch, row, col), r_y_n(batch, row, col), r_x_msb(batch, row, col), r_y_msb(batch, row, col);
+        FixTensor<T, n, f, k, Rank, Options> r_xy(batch, row, col), r_x_rymsb(batch, row, col), r_xmsb_y(batch, row, col);
+        r_x_m.setRadnom();
+        r_y_m.setRadnom();
+        r_x_n = extend_locally<n,f,k>(r_x_m);
+        r_y_n = extend_locally<n,f,k>(r_y_m);
+        r_x_msb = get_msb<n,f,k>(r_x_n);
+        r_y_msb = get_msb<n,f,k>(r_y_n);
+        r_xy = r_x_n * r_y_n;
+        r_x_rymsb = r_x_n * r_y_msb;
+        r_xmsb_y = r_x_msb * r_y_n;
+        secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
+    } else {
+        FixTensor<T, m, f, k, Rank, Options> r_x_m(row, col), r_y_m(row, col);
+        FixTensor<T, n, f, k, Rank, Options> r_x_n(row, col), r_y_n(row, col), r_x_msb(row, col), r_y_msb(row, col);
+        FixTensor<T, n, f, k, Rank, Options> r_xy(row, col), r_x_rymsb(row, col), r_xmsb_y(row, col);
+        r_x_m.setRandom();
+        r_y_m.setRandom();
+        r_x_n = extend_locally<n,f,k>(r_x_m);
+        r_y_n = extend_locally<n,f,k>(r_y_m);
+        r_x_msb = get_msb<n,f,k>(r_x_n);
+        r_y_msb = get_msb<n,f,k>(r_y_n);
+        r_xy = r_x_n * r_y_n;
+        r_x_rymsb = r_x_n * r_y_msb;
+        r_xmsb_y = r_x_msb * r_y_n;
+        secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
     }
-    Random rg;
-    for(long long i = 0; i < R_X.size(); ++i) {
-        T val = rg.template randomGE<T>(1, m)[0];
-        R_X.data()[i] = Fix<T, m, f, k>(val);
-        R_X_N.data()[i] = Fix<T, n, f, k>(val);
-        R_X_MSB.data()[i] = R_X.data()[i].template get_msb<n, f, k>();
-        val = rg.template randomGE<T>(1, m)[0];
-        R_Y.data()[i] = Fix<T, m, f, k>(val);
-        R_Y_N.data()[i] = Fix<T, n, f, k>(val);
-        R_Y_MSB.data()[i] = R_Y.data()[i].template get_msb<n, f, k>();
-    }
-    R_XY = (R_X_N * R_Y_N);
-    R_X_RYMSB = R_X_N * R_Y_MSB;
-    R_XMSB_Y = R_X_MSB * R_Y_N;
-    secret_share_and_write_tensor(R_X, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_Y, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_X_N, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_Y_N, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_X_MSB, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_Y_MSB, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_XY, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_X_RYMSB, p0_ptr, p1_ptr);
-    secret_share_and_write_tensor(R_XMSB_Y, p0_ptr, p1_ptr);
-    return;
 }
 
-// Optimized Element-wise Multiplication Protocol from PDF
+// Optimized Element-wise Multiplication Protocol (Elementwise Mul & Extend)
 template <typename T, int m, int f, int k, int n, int Rank, int Options>
 auto elementwise_mul_opt(
     const FixTensor<T, m, f, k, Rank, Options>& x_m_share,
@@ -124,10 +122,10 @@ auto elementwise_mul_opt(
     y_hat_prime_n = y_hat_prime_n - const_term_n;
     auto term1 = FixTensor<T, n, f, k, Rank, Options>(x_hat.dimensions());
     if (mpc_instance->party == 0){
-        term1.setConstant(Fix<T,n,f,k>(0));
+        term1 = x_hat_prime_n * y_hat_prime_n;
     }
     else{
-        term1 = x_hat_prime_n * y_hat_prime_n;
+        term1.setConstant(Fix<T,n,f,k>(0));
     }
     auto term2 = x_hat_prime_n * ry_n_share;
     auto term3 = x_hat_prime_n * t_y * ry_msb_n_share;

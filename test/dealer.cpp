@@ -7,6 +7,8 @@
 #include "mpc/tensor_ops.h"
 #include "mpc/matmul.h"
 #include "nn/FC.h"
+#include "mpc/square.h"
+#include "mpc/elementwise_mul.h"
 
 
 
@@ -22,34 +24,25 @@ int main() {
     constexpr int M_BITS = BW - F;
     Random rg;
 
-    // --- FC Layer Setup ---
-    using T_fc = uint64_t;
-    const int F_fc = 16;
-    const int K_INT_fc = 15;
-    const int IN_BW_fc = 64;
-    const int OUT_BW_fc = 48;
-    FCLayerParams params_fc = {5, 2, 3, 4, false, false, 0};
-    FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc> fc_layer(params_fc);
-    size_t fc_randomness_size = fc_layer.getForwardRandomnessSize();
-
-
     // 1. Pre-calculate total size
     size_t total_size = 0;
     const size_t scalar_size = sizeof(T);
     // For test_secure_matmul (2D)
-    total_size += get_matmul_random_size<T, BW, F, K, 2, 2, 2>(2, 2, 3);
-    // For test_secure_matmul_3d
-    total_size += get_matmul_random_size<T, BW, F, K, 3, 2, 3>(2, 2, 3, 2);
+    total_size += get_matmul_random_size<T, BW, F, K, 2, 2, 2>(2, 3, 2);
+    // For test_secure_matmul (3D x 2D)
+    total_size += get_matmul_random_size<T, BW, F, K, 3, 2, 3>(2, 2, 3, 2);  
     // For test_truncate_zero_extend_scalar
     total_size += 3 * scalar_size;
-    // For test_truncate_zero_extend_tensor_2d
+    // // For test_truncate_zero_extend_tensor_2d
     total_size += get_zero_extend_random_size<T, M_BITS, BW, F, K, 2>(20, 20, 20);
-    // For test_truncate_zero_extend_tensor_3d
+    // // For test_truncate_zero_extend_tensor_3d
     total_size += get_zero_extend_random_size<T, M_BITS, BW, F, K, 3>(2, 2, 2);
     // For test_elementwise_mul_opt
-    total_size += get_elementwise_mul_random_size<T, M_BITS, F, K, BW, 2, 2>(3, 4, 4);
-    // total_size += fc_randomness_size;
-    
+    total_size += get_elementwise_mul_random_size<T, M_BITS, F, K, BW, 2, Eigen::RowMajor>(0, 3, 4);
+    // For test_square_tensor_opt
+    total_size += get_square_random_size<T, M_BITS, F, K, BW, 2, Eigen::RowMajor>(0, 3, 4);
+    // For test_square_tensor_opt_3d
+    total_size += get_square_random_size<T, M_BITS, F, K, BW, 3, Eigen::RowMajor>(2, 2, 2);
     std::cout << "Total size per party: " << total_size << " bytes." << std::endl;
 
     // 2. Allocate raw uint8_t* buffers
@@ -57,17 +50,17 @@ int main() {
     uint8_t* p1_data = new uint8_t[total_size];
 
     // 3. Generate randomness and write to buffers
-    uint8_t* p0_ptr = p0_data;
-    uint8_t* p1_ptr = p1_data;
+    Buffer p0_buf(p0_data);
+    Buffer p1_buf(p1_data);
 
     // For test_secure_matmul (2D)
     {
-        generate_matmul_randomness<T, BW, F, K, 2, 2, 2>(p0_ptr, p1_ptr, 2, 2, 3);
+        generate_matmul_randomness<T, BW, F, K, 2, 2, 2>(p0_buf, p1_buf, 2, 3, 2);
     }
     
     // For test_secure_matmul_3d
     {
-        generate_matmul_randomness<T, BW, F, K, 3, 2, 3>(p0_ptr, p1_ptr, 2, 2, 3, 2);
+        generate_matmul_randomness<T, BW, F, K, 3, 2, 3>(p0_buf, p1_buf, 2, 2, 3, 2);
     }
 
     // For test_truncate_zero_extend_scalar
@@ -76,35 +69,40 @@ int main() {
         Fix<T, M_BITS, F, K> r_m(r_m_val);
         Fix<T, BW, F, K> r_e(r_m_val); // r_e is the zero-extension of r_m
         Fix<T, BW, F, K> r_msb = r_m.template get_msb<BW, F, K>(); // r_msb is the MSB of r_m
-        secret_share_and_write_scalar(r_m, p0_ptr, p1_ptr);
-        secret_share_and_write_scalar(r_e, p0_ptr, p1_ptr);
-        secret_share_and_write_scalar(r_msb, p0_ptr, p1_ptr);
+        secret_share_and_write_scalar(r_m, p0_buf, p1_buf);
+        secret_share_and_write_scalar(r_e, p0_buf, p1_buf);
+        secret_share_and_write_scalar(r_msb, p0_buf, p1_buf);
     }
 
     // For test_truncate_zero_extend_tensor_2d
     {
-        generate_zero_extend_randomness<T, M_BITS, BW, F, K, 2>(20, 20, 20, p0_ptr, p1_ptr);
+        generate_zero_extend_randomness<T, M_BITS, BW, F, K, 2>(20, 20, 20, p0_buf, p1_buf);
     }
 
     // For test_truncate_zero_extend_tensor_3d
     {
-        generate_zero_extend_randomness<T, M_BITS, BW, F, K, 3>(2, 2, 2, p0_ptr, p1_ptr);
+        generate_zero_extend_randomness<T, M_BITS, BW, F, K, 3>(2, 2, 2, p0_buf, p1_buf);
     }
 
     // For test_elementwise_mul_opt
     {
-        generate_elementwise_mul_randomness<T, M_BITS, F, K, BW, 2, 2>(3, 4, 4, p0_ptr, p1_ptr);
+        generate_elementwise_mul_randomness<T, M_BITS, F, K, BW, 2, Eigen::RowMajor>(0, 3, 4, p0_buf, p1_buf);
     }
 
-    // // For FC Layer Test
-    // {
-    //     fc_layer.dealer_generate_forward_randomness(p0_ptr, p1_ptr, U, V);
-    //     fc_layer.dealer_generate_backward_randomness(p0_ptr, p1_ptr);
-    // }
+    // For test_square_tensor_opt
+    {
+        generate_square_randomness<T, M_BITS, F, K, BW, 2, Eigen::RowMajor>(0, 3, 4, p0_buf, p1_buf);
+    }
+
+    // For test_square_tensor_opt_3d
+    {
+        generate_square_randomness<T, M_BITS, F, K, BW, 3, Eigen::RowMajor>(2, 2, 2, p0_buf, p1_buf);
+    }
 
     // 4. Assert that we wrote the exact calculated size
-    size_t p0_offset = p0_ptr - p0_data;
-    size_t p1_offset = p1_ptr - p1_data;
+    size_t p0_offset = p0_buf.ptr - p0_data;
+    size_t p1_offset = p1_buf.ptr - p1_data;
+    std::cout << "p0_offset: " << p0_offset << ", p1_offset: " << p1_offset << ", total_size: " << total_size << std::endl;
     assert(p0_offset == total_size);
     assert(p1_offset == total_size);
 
