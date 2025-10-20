@@ -226,7 +226,7 @@ void test_truncate_zero_extend_tensor_2d(MPC& mpc) {
     FixTensorBW r_msb_share(20, 20);
     mpc.read_fixtensor_share(r_msb_share);
 
-    auto X_ext_share = zero_extend_tensor<uint64_t, M_BITS, F, K, 2, Eigen::RowMajor, BW>(X_m_share, r_m_share, r_e_share, r_msb_share);
+    auto X_ext_share = zero_extend_tensor<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(X_m_share, r_m_share, r_e_share, r_msb_share);
     auto X_reconstructed = reconstruct_tensor(X_ext_share);
 
     if (mpc.party == 0) {
@@ -264,7 +264,7 @@ void test_truncate_zero_extend_tensor_3d(MPC& mpc) {
     FixTensorBW r_msb_share(2, 2, 2);
     mpc.read_fixtensor_share(r_msb_share);
 
-    auto X_ext_share = zero_extend_tensor<uint64_t, M_BITS, F, K, 3, Eigen::RowMajor, BW>(X_m_share, r_m_share, r_e_share, r_msb_share);
+    auto X_ext_share = zero_extend_tensor<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_m_share, r_m_share, r_e_share, r_msb_share);
     auto X_reconstructed = reconstruct_tensor(X_ext_share);
 
      if (mpc.party == 0) {
@@ -479,7 +479,7 @@ void test_square_scalar_opt(MPC& mpc) {
     FixBW r_r_msb_share;
     mpc.read_fix_share(r_r_msb_share);
 
-    auto x_square_share = square_scalar_opt<uint64_t, M_BITS, F, K, BW>(x_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
+    auto x_square_share = square_scalar_opt<uint64_t, BW, M_BITS, F, K>(x_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
     auto x_reconstructed = truncate_reduce(reconstruct(x_square_share));
     
     if (mpc.party == 0) {
@@ -528,7 +528,7 @@ void test_exp_scalar_opt(MPC& mpc) {
     }
     
     FixBW x_n_share = secret_share(x_secret);
-    FixBW x_exp_share = exp_scalar<uint64_t, M_BITS, BW, F, K>(x_n_share, R, R_N, R_SQUARE, R_MSB, R_R_MSB, R_M_EXT, R_E_EXT, R_MSB_EXT);
+    FixBW x_exp_share = exp_scalar<uint64_t, BW, M_BITS, F, K>(x_n_share, R, R_N, R_SQUARE, R_MSB, R_R_MSB, R_M_EXT, R_E_EXT, R_MSB_EXT);
     FixBW x_exp_reconstructed = reconstruct(x_exp_share);
 
     if (mpc.party == 0) {
@@ -538,6 +538,72 @@ void test_exp_scalar_opt(MPC& mpc) {
         } else {
             std::cout << "Party " << mpc.party << " Exp Scalar Opt test passed!" << std::endl;
         }
+    }
+    mpc.print_stats();
+}
+
+void test_exp_tensor_opt_3d(MPC& mpc) {
+    std::cout << "\n--- Testing Exp Tensor Opt 3D for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    mpc.reset_stats();
+    if (mpc.M != 2) return;
+
+    constexpr int M_BITS = BW - F;
+    using FixTensorM = FixTensor<uint64_t, M_BITS, F, K, 3>;
+    using FixTensorBW = FixTensor<uint64_t, BW, F, K, 3>;
+    FixTensorBW X_plain(20,20,20);
+    Random rg;
+    for (int i = 0; i < 20; i++){
+        for (int j = 0; j < 20; j++){
+            for (int k = 0; k < 20; k++){
+                auto val = rg.template randomGE<uint64_t>(1, F)[0];
+                X_plain(i,j,k) = Fix<uint64_t, BW, F, K>(double(-val/pow(2.0, F)));
+            }
+        }
+    }
+    for(int i = 0; i < 2; ++i) for(int j = 0; j < 2; ++j) for(int k = 0; k < 2; ++k) {
+        std::cout << "X_plain(" << i << "," << j << "," << k << ").to_float<double>() = " << X_plain(i,j,k).to_float<double>() << std::endl;
+    }
+    int iters = RECIPROCAL_NR_ITERS;
+    FixTensorBW X_share = secret_share_tensor(X_plain);
+    
+    FixTensor<uint64_t, M_BITS, F, K, 3> r_m_share[iters];
+    FixTensor<uint64_t, BW, F, K, 3> r_n_share[iters];
+    FixTensor<uint64_t, BW, F, K, 3> r_square_share[iters];
+    FixTensor<uint64_t, BW, F, K, 3> r_msb_share[iters];
+    FixTensor<uint64_t, BW, F, K, 3> r_r_msb_share[iters];
+
+    for(int i = 0; i < iters; ++i) {
+        r_m_share[i].resize(20,20,20);
+        r_n_share[i].resize(20,20,20);
+        r_square_share[i].resize(20,20,20);
+        r_msb_share[i].resize(20,20,20);
+        r_r_msb_share[i].resize(20,20,20);
+        mpc.read_fixtensor_share(r_m_share[i]);
+        mpc.read_fixtensor_share(r_n_share[i]);
+        mpc.read_fixtensor_share(r_square_share[i]);
+        mpc.read_fixtensor_share(r_msb_share[i]);
+        mpc.read_fixtensor_share(r_r_msb_share[i]);
+    }
+
+    FixTensorM R_M_EXT(20, 20, 20);
+    FixTensorBW R_E_EXT(20, 20, 20);
+    FixTensorBW R_MSB_EXT(20, 20, 20);
+    mpc.read_fixtensor_share(R_M_EXT);
+    mpc.read_fixtensor_share(R_E_EXT);
+    mpc.read_fixtensor_share(R_MSB_EXT);
+
+    auto X_exp_share = exp_tensor<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share, R_M_EXT, R_E_EXT, R_MSB_EXT);
+    auto X_exp_reconstructed = reconstruct_tensor(X_exp_share);
+
+    if (mpc.party == 0) {
+        for(int i=0; i<20; ++i) for(int j=0; j<20; ++j) for(int k=0; k<20; ++k) {
+            if (std::abs(std::exp(X_plain(i,j,k).to_float<double>()) - X_exp_reconstructed(i,j,k).to_float<double>()) > 1e-1) {
+                std::cout << "Party " << mpc.party << " Exp Tensor Opt 3D test FAILED!" << std::endl;
+                std::cout << "X_plain(" << i << "," << j << "," << k << ").to_float<double>() = " << X_plain(i,j,k).to_float<double>() << std::endl;
+                std::cout << "X_exp_reconstructed(" << i << "," << j << "," << k << ").to_float<double>() = " << X_exp_reconstructed(i,j,k).to_float<double>() << std::endl;
+            }
+        }
+        std::cout << "Party " << mpc.party << " Exp Tensor Opt 3D test passed!" << std::endl;
     }
     mpc.print_stats();
 }
@@ -559,22 +625,23 @@ int main(int argc, char** argv) {
         mpc.load_random_data(random_data_file);
 
         // Run tests
-        // test_scalar_share_and_reconstruct(mpc);
-        // test_tensor_share_and_reconstruct(mpc);
-        // test_secure_matmul(mpc);
-        // test_secure_matmul_3d(mpc);
-        // for(int i = 0; i < 10; i++){
-        //     test_truncate_zero_extend_scalar(mpc);
-        // }
-        // test_truncate_zero_extend_tensor_2d(mpc);
-        // test_truncate_zero_extend_tensor_3d(mpc);
-        // test_elementwise_mul_opt(mpc); 
-        // test_square_tensor_opt(mpc);
+        test_scalar_share_and_reconstruct(mpc);
+        test_tensor_share_and_reconstruct(mpc);
+        test_secure_matmul(mpc);
+        test_secure_matmul_3d(mpc);
+        for(int i = 0; i < 10; i++){
+            test_truncate_zero_extend_scalar(mpc);
+        }
+        test_truncate_zero_extend_tensor_2d(mpc);
+        test_truncate_zero_extend_tensor_3d(mpc);
+        test_elementwise_mul_opt(mpc); 
+        test_square_tensor_opt(mpc);
         test_square_tensor_opt_3d(mpc);
         for(int i = 0; i < 10; i++){
             test_square_scalar_opt(mpc);
         }
         test_exp_scalar_opt(mpc);
+        test_exp_tensor_opt_3d(mpc);
         mpc.close();
 
     } catch (const std::exception& e) {

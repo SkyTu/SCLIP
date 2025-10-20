@@ -26,7 +26,7 @@ size_t get_square_scalar_random_size(){
     return 5 * sizeof(T);
 }
 
-template <typename T, int m, int n, int f, int k>
+template <typename T, int n, int m, int f, int k>
 void generate_square_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
     Fix<T, m, f, k> R;
     Fix<T, n, f, k> R_N;
@@ -38,13 +38,9 @@ void generate_square_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
     // T r_val = 1;
     R = Fix<T, m, f, k>(r_val);
     R_N = Fix<T, n, f, k>(r_val);
-    std::cout << "r_val: " << r_val << std::endl;
     R_SQUARE = R_N * R_N;
-    std::cout << "R_SQUARE: " << R_SQUARE.val << std::endl;
     R_MSB = R.template get_msb<n, f, k>();
-    std::cout << "R_MSB: " << R_MSB.val << std::endl;
     R_R_MSB = R_N * R_MSB;
-    std::cout << "R_R_MSB: " << R_R_MSB.val << std::endl;
     secret_share_and_write_scalar<Fix<T, m, f, k>>(R, p0_buf, p1_buf);
     secret_share_and_write_scalar<Fix<T, n, f, k>>(R_N, p0_buf, p1_buf);
     secret_share_and_write_scalar<Fix<T, n, f, k>>(R_SQUARE, p0_buf, p1_buf);
@@ -53,14 +49,14 @@ void generate_square_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
 }
 
 
-template <typename T, int m, int f, int k, int n, int Rank, int Options>
+template <typename T, int n, int m, int f, int k,  int Rank>
 void generate_square_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
     if constexpr(Rank == 3){
-        FixTensor<T, m, f, k, Rank, Options> R(batch, row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_N(batch, row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_SQUARE(batch, row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_MSB(batch, row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_R_MSB(batch, row, col);
+        FixTensor<T, m, f, k, Rank> R(batch, row, col);
+        FixTensor<T, n, f, k, Rank> R_N(batch, row, col);
+        FixTensor<T, n, f, k, Rank> R_SQUARE(batch, row, col);
+        FixTensor<T, n, f, k, Rank> R_MSB(batch, row, col);
+        FixTensor<T, n, f, k, Rank> R_R_MSB(batch, row, col);
         R.setRandom();
         // R.setConstant(Fix<T,m,f,k>(0));
         R_N = extend_locally<n, f, k>(R);
@@ -73,11 +69,11 @@ void generate_square_randomness(int batch, int row, int col, Buffer& p0_buf, Buf
         secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
         secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
     } else {
-        FixTensor<T, m, f, k, Rank, Options> R(row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_N(row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_SQUARE(row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_MSB(row, col);
-        FixTensor<T, n, f, k, Rank, Options> R_R_MSB(row, col);
+        FixTensor<T, m, f, k, Rank> R(row, col);
+        FixTensor<T, n, f, k, Rank> R_N(row, col);
+        FixTensor<T, n, f, k, Rank> R_SQUARE(row, col);
+        FixTensor<T, n, f, k, Rank> R_MSB(row, col);
+        FixTensor<T, n, f, k, Rank> R_R_MSB(row, col);
         R.setRandom();
         // R.setConstant(Fix<T,m,f,k>(0));
         R_N = extend_locally<n, f, k>(R);
@@ -92,8 +88,8 @@ void generate_square_randomness(int batch, int row, int col, Buffer& p0_buf, Buf
     }
 }
 
-template <typename T, int m, int f, int k, int n>
-Fix<T, n, f, k> square_scalar_opt(Fix<T,m,f,k>x_m_share, Fix<T, m, f, k> R, Fix<T, n, f, k> R_N, Fix<T, n, f, k> R_SQUARE, Fix<T, n, f, k> R_MSB, Fix<T, n, f, k> R_R_MSB){
+template <typename T, int n, int m, int f, int k>
+Fix<T, n, f, k> square_scalar_opt(Fix<T, m, f, k>x_m_share, Fix<T, m, f, k> R, Fix<T, n, f, k> R_N, Fix<T, n, f, k> R_SQUARE, Fix<T, n, f, k> R_MSB, Fix<T, n, f, k> R_R_MSB){
     auto x_hat = reconstruct(x_m_share + R);
 
     T two_pow_m_minus_2_val = (m < 2 || m - 2 >= 64) ? 0 : (T(1) << (m - 2));
@@ -102,7 +98,7 @@ Fix<T, n, f, k> square_scalar_opt(Fix<T,m,f,k>x_m_share, Fix<T, m, f, k> R, Fix<
 
     T two_pow_m_val = (m >= 64) ? 0 : (T(1) << m);
 
-    Fix<T, m, f, k> t_x = (Fix<T, n, f, k>(1) - x_hat_prime_m.template get_msb<n, f, k>()) * Fix<T, n, f, k>(two_pow_m_val);
+    Fix<T, n, f, k> t_x = (Fix<T, n, f, k>(1) - x_hat_prime_m.template get_msb<n, f, k>()) * Fix<T, n, f, k>(two_pow_m_val);
 
     Fix<T, n, f, k> x_hat_prime_n = Fix<T, n, f, k>(x_hat_prime_m.val);
     Fix<T, n, f, k> const_term_n = Fix<T, n, f, k>(two_pow_m_minus_2_val);

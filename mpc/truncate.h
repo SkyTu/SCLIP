@@ -12,7 +12,7 @@ int get_zero_extend_scalar_random_size(){
     return 3 * sizeof(T);
 }
 
-template <typename T, int smallBW, int BW, int F, int K, int Rank>
+template <typename T, int Rank>
 int get_zero_extend_random_size(int batch, int row, int col){
     if(Rank == 3){
         return (batch * row * col + batch * row * col + batch * row * col) * sizeof(T);
@@ -21,7 +21,7 @@ int get_zero_extend_random_size(int batch, int row, int col){
     }
 }
 
-template <typename T, int smallBW, int BW, int F, int K>
+template <typename T, int BW, int smallBW, int F, int K>
 void generate_zero_extend_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
     Random rg;
     T r_val = rg.template randomGE<T>(1, smallBW)[0];
@@ -33,7 +33,7 @@ void generate_zero_extend_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
     secret_share_and_write_scalar<Fix<T, BW, F, K>>(r_msb, p0_buf, p1_buf);
 }
 
-template <typename T, int smallBW, int BW, int F, int K, int Rank>
+template <typename T, int BW, int smallBW, int F, int K, int Rank>
 void generate_zero_extend_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
     FixTensor<T, smallBW, F, K, Rank> r_m;
     FixTensor<T, BW, F, K, Rank> r_e;
@@ -81,7 +81,7 @@ truncate_reduce_tensor(const FixTensor<T, bw, f, k, Rank, Options>& x_share) {
 
 // Layout per element (per party): [r_m_share (m-ring), r_e_share (bw-ring), r_msb_share (bw-ring)]
 
-template <typename T, int m, int f, int k, int bw>
+template <typename T, int bw, int m, int f, int k>
 Fix<T, bw, f, k> zero_extend(const Fix<T, m, f, k>& x_m_share, const Fix<T, m, f, k>& r_m_share, const Fix<T, bw, f, k>& r_e_share, const Fix<T, bw, f, k>& r_msb_share) {
     static_assert(bw > m, "zero_extend requires bw > m");
     if (mpc_instance == nullptr) throw std::runtime_error("MPC instance not initialized.");
@@ -142,7 +142,7 @@ Fix<T, bw, f, k> zero_extend_reconstructed(const Fix<T, m, f, k>& x_hat, const F
 }
 
 // Overload: zero_extend_tensor with provided r_m, r_e, r_msb shares
-template <typename T, int m, int f, int k, int Rank, int Options, int bw>
+template <typename T, int bw, int m, int f, int k, int Rank, int Options>
 FixTensor<T, bw, f, k, Rank, Options>
 zero_extend_tensor(const FixTensor<T, m, f, k, Rank, Options>& x_m_share,
                    const FixTensor<T, m, f, k, Rank, Options>& r_m_share,

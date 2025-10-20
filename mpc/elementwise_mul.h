@@ -21,7 +21,7 @@ int get_elementwise_mul_random_size(int batch, int row, int col){
     return 2 * m_size + 7 * n_size;
 }
 
-template <typename T, int m, int f, int k, int n, int Rank, int Options>
+template <typename T, int n, int m, int f, int k, int Rank, int Options>
 void generate_elementwise_mul_randomness(
     int batch,
     int row,

@@ -249,6 +249,62 @@ public:
     }
 };
 
+// Specialization for Rank 4
+template <typename T, int bw, int f, int k, int Options>
+class FixTensor<T, bw, f, k, 4, Options> : public Eigen::Tensor<Fix<T, bw, f, k>, 4, Options> {
+public:
+    using Base = Eigen::Tensor<Fix<T, bw, f, k>, 4, Options>;
+    using FixType = Fix<T, bw, f, k>;
+    using Base::Base;
+    template<typename OtherDerived>
+    FixTensor(const Eigen::TensorBase<OtherDerived, 0>& other) : Base(other) {}
+    
+    void trunc_in_place(int shift_bits) {
+        for (long long i = 0; i < this->size(); ++i) {
+            this->data()[i] = this->data()[i].trunc(shift_bits);
+        }
+    }
+
+    void print(const std::string& title = "") const {
+        if (!title.empty()) std::cout << title << std::endl;
+        std::cout << std::fixed << std::setprecision(4);
+        std::cout << "[";
+        for (long long i = 0; i < this->dimension(0); ++i) {
+            if (i > 0) std::cout << std::endl << std::endl << " ";
+            std::cout << "[";
+            for (long long j = 0; j < this->dimension(1); ++j) {
+                if (j > 0) std::cout << std::endl << "  ";
+                std::cout << "[";
+                for (long long l = 0; l < this->dimension(2); ++l) {
+                    if (l > 0) std::cout << std::endl << "    ";
+                    std::cout << "[";
+                    for (long long m = 0; m < this->dimension(3); ++m) {
+                        std::cout << (*this)(i, j, l, m);
+                        if (m < this->dimension(3) - 1) std::cout << ", ";
+                    }
+                    std::cout << "]";
+                    if (l < this->dimension(2) - 1) std::cout << ", ";
+                }
+                std::cout << "]";
+            }
+            std::cout << "]";
+        }
+        std::cout << "]";
+        std::cout.unsetf(std::ios_base::floatfield);
+        std::cout << std::endl;
+    }
+    void ones() { this->setConstant(FixType(1.0)); }
+    void zeros() { this->setZero(); }
+    void initialize(int k_int = 3, int gap_in = -1) {
+        assert(k >= k_int && "Input k must be smaller or equal to the k of FixType");
+        int gap = (gap_in == -1) ? (f + k - k_int) : gap_in;
+        Random random_gen;
+        T* rand_data = random_gen.randomGEwithGap<T>(this->size(), bw, gap);
+        memcpy(this->data(), rand_data, this->size() * sizeof(FixType));
+        delete[] rand_data;
+    }
+};
+
 // ================= Dealer Helper Functions =================
 
 // Takes a plaintext tensor, splits it into two secret shares.
