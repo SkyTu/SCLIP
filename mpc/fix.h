@@ -56,14 +56,20 @@ public:
     template <typename TFloat, typename = std::enable_if_t<std::is_floating_point<TFloat>::value>>
     Fix(TFloat float_val) {
         static_assert(bw >= (1 + f + k), "Bitwidth too small: require at least 1 + k + f bits");
-        val = static_cast<T>(float_val * (1ULL << f));
+        if(float_val < 0)
+            val = static_cast<T>((1ULL << bw) + float_val * (1ULL << f));
+        else
+            val = static_cast<T>(float_val * (1ULL << f));
     }
 
     // Constructor from float with custom scale
     template <typename TFloat, typename = std::enable_if_t<std::is_floating_point<TFloat>::value>>
     Fix(TFloat float_val, int custom_f) {
         static_assert(bw >= (1 + f + k), "Bitwidth too small: require at least 1 + k + f bits");
-        val = static_cast<T>(float_val * (1ULL << custom_f));
+        if(float_val < 0)
+            val = static_cast<T>((1ULL << bw) + float_val * (1ULL << custom_f));
+        else
+            val = static_cast<T>(float_val * (1ULL << custom_f));
     }
     
     template <typename TFloat>

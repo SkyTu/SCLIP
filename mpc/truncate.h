@@ -7,6 +7,11 @@
 #include "utils/random.h"
 #include <iostream>
 
+template <typename T>
+int get_zero_extend_scalar_random_size(){
+    return 3 * sizeof(T);
+}
+
 template <typename T, int smallBW, int BW, int F, int K, int Rank>
 int get_zero_extend_random_size(int batch, int row, int col){
     if(Rank == 3){
@@ -14,6 +19,18 @@ int get_zero_extend_random_size(int batch, int row, int col){
     }else{
         return (row * col + row * col + row * col) * sizeof(T);
     }
+}
+
+template <typename T, int smallBW, int BW, int F, int K>
+void generate_zero_extend_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
+    Random rg;
+    T r_val = rg.template randomGE<T>(1, smallBW)[0];
+    Fix<T, smallBW, F, K> r_m = Fix<T, smallBW, F, K>(r_val);
+    Fix<T, BW, F, K> r_e = Fix<T, BW, F, K>(r_val);
+    Fix<T, BW, F, K> r_msb = r_m.template get_msb<BW, F, K>();
+    secret_share_and_write_scalar<Fix<T, smallBW, F, K>>(r_m, p0_buf, p1_buf);
+    secret_share_and_write_scalar<Fix<T, BW, F, K>>(r_e, p0_buf, p1_buf);
+    secret_share_and_write_scalar<Fix<T, BW, F, K>>(r_msb, p0_buf, p1_buf);
 }
 
 template <typename T, int smallBW, int BW, int F, int K, int Rank>
