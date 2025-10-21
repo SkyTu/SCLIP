@@ -69,31 +69,31 @@ auto secure_matmul(
     using FixTensorZ = FixTensorT<T, bw, f, k, (RankX - 1 + RankY - 1), Eigen::RowMajor>;
 
     FixTensorX e_val;
-    const FixTensorX& e;
+    FixTensorX e;
     FixTensorY f_rec_val;
 
     if (e_ptr == nullptr && f_rec_ptr == nullptr) {
         e = x_share - u_share;
         f_rec_val = y_share - v_share;
-        reconstruct_tensor_parallel(e_share, f_share);
+        reconstruct_tensor_parallel(e, f_rec_val);
     }
 
     else if (e_ptr == nullptr && f_rec_ptr != nullptr) {
         e = x_share - u_share;
-        f_rec = reconstruct_tensor(f_rec_ptr + v_share);
+        f_rec_val = reconstruct_tensor(*f_rec_ptr + v_share);
     }
 
     else if (e_ptr != nullptr && f_rec_ptr == nullptr) {
-        e = reconstruct_tensor(e_ptr + u_share);
+        e = reconstruct_tensor(*e_ptr + u_share);
         f_rec_val = y_share - v_share;
     }
     
 
     FixTensorZ term1 = tensor_mul(e, y_share);
-    FixTensorZ term2 = tensor_mul(x_share, f_rec);
+    FixTensorZ term2 = tensor_mul(x_share, f_rec_val);
     FixTensorZ output_share = term1 + term2 + z_share;
     if (party == 1) {
-        FixTensorZ ef_prod = tensor_mul(e, f_rec);
+        FixTensorZ ef_prod = tensor_mul(e, f_rec_val);
         output_share = output_share - ef_prod;
     }
     return output_share;

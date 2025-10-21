@@ -99,7 +99,9 @@ auto elementwise_mul_opt(
     auto x_hat = x_m_share;
     auto y_hat = y_m_share;
     if (!x_reconstructed && !y_reconstructed){
-        reconstruct_tensor_parallel(x_m_share + rx_m_share, y_m_share + ry_m_share);
+        x_hat = x_m_share + rx_m_share;
+        y_hat = y_m_share + ry_m_share;
+        reconstruct_tensor_parallel(x_hat, y_hat);
     }
     else if (x_reconstructed && !y_reconstructed){
         y_hat = reconstruct_tensor(y_m_share + ry_m_share);
