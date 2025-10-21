@@ -76,6 +76,71 @@ void test_tensor_share_and_reconstruct(MPC& mpc) {
     mpc.print_stats();
 }
 
+void test_reconstruct_parallel(MPC& mpc) {
+    std::cout << "\n--- Testing Parallel Tensor Reconstruct for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    mpc.reset_stats();
+
+    if (mpc.M != 2) return;
+
+    using FixTensor2D = FixTensor<uint64_t, BW, F, K, 2>;
+    using FixTensor3D = FixTensor<uint64_t, BW, F, K, 3>;
+
+    FixTensor2D A_plain(2, 3);
+    FixTensor3D B_plain(2, 2, 2);
+    FixTensor2D C_plain(2, 2);
+
+    if (mpc.party == 0) {
+        A_plain.setValues({{1.1, 2.2, 3.3}, {4.4, 5.5, 6.6}});
+        B_plain.setValues({{{-1.0, -2.0}, {-3.0, -4.0}}, {{-5.0, -6.0}, {-7.0, -8.0}}});
+        C_plain.setValues({{1.0, 2.0}, {3.0, 4.0}});
+    }
+
+    // Create shares
+    FixTensor2D a_share = secret_share_tensor(A_plain);
+    FixTensor3D b_share = secret_share_tensor(B_plain);
+    FixTensor2D c_share = secret_share_tensor(C_plain);
+
+    // Reconstruct both tensors in parallel
+    // After this call, a_share and b_share will hold the reconstructed values
+    reconstruct_tensor_parallel(a_share, b_share, c_share);
+
+    if (mpc.party == 0) {
+        bool pass = true;
+        for (int i = 0; i < A_plain.dimension(0); ++i) {
+            for (int j = 0; j < A_plain.dimension(1); ++j) {
+                if (std::abs(A_plain(i, j).to_float<double>() - a_share(i, j).to_float<double>()) > 1e-4) {
+                    pass = false;
+                }
+            }
+        }
+
+        for (int i = 0; i < B_plain.dimension(0); ++i) {
+            for (int j = 0; j < B_plain.dimension(1); ++j) {
+                for (int k = 0; k < B_plain.dimension(2); ++k) {
+                    if (std::abs(B_plain(i,j,k).to_float<double>() - b_share(i,j,k).to_float<double>()) > 1e-4) {
+                        pass = false;
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < C_plain.dimension(0); ++i) {
+            for (int j = 0; j < C_plain.dimension(1); ++j) {
+                if (std::abs(C_plain(i, j).to_float<double>() - c_share(i, j).to_float<double>()) > 1e-4) {
+                    pass = false;
+                }
+            }
+        }
+        
+        if (pass) {
+            std::cout << "Party " << mpc.party << " Parallel Tensor Reconstruct test passed!" << std::endl;
+        } else {
+            std::cout << "Party " << mpc.party << " Parallel Tensor Reconstruct test FAILED!" << std::endl;
+        }
+    }
+    mpc.print_stats();
+}
+
 void test_secure_matmul(MPC& mpc) {
     std::cout << "\n--- Testing Secure MatMul 2D for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
     mpc.reset_stats();
@@ -627,6 +692,7 @@ int main(int argc, char** argv) {
         // Run tests
         test_scalar_share_and_reconstruct(mpc);
         test_tensor_share_and_reconstruct(mpc);
+        test_reconstruct_parallel(mpc);
         test_secure_matmul(mpc);
         test_secure_matmul_3d(mpc);
         for(int i = 0; i < 10; i++){

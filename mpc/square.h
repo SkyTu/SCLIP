@@ -121,9 +121,9 @@ Fix<T, n, f, k> square_scalar_opt(Fix<T, m, f, k>x_m_share, Fix<T, m, f, k> R, F
 
 //extend & square
 template <typename T, int n, int m, int f, int k, int Rank, int Options>
-FixTensor<T, n, f, k, Rank, Options> square_tensor_opt(FixTensor<T, m, f, k, Rank, Options> x_m_share, FixTensor<T, m, f, k, Rank, Options> R, FixTensor<T, n, f, k, Rank, Options> R_N, FixTensor<T, n, f, k, Rank, Options> R_SQUARE, FixTensor<T, n, f, k, Rank, Options> R_MSB, FixTensor<T, n, f, k, Rank, Options> R_R_MSB)
+FixTensor<T, n, f, k, Rank, Options> square_tensor_opt(FixTensor<T, m, f, k, Rank, Options> x_m_share, FixTensor<T, m, f, k, Rank, Options> R, FixTensor<T, n, f, k, Rank, Options> R_N, FixTensor<T, n, f, k, Rank, Options> R_SQUARE, FixTensor<T, n, f, k, Rank, Options> R_MSB, FixTensor<T, n, f, k, Rank, Options> R_R_MSB, bool reconstructed = false)
 {
-    auto x_hat = reconstruct_tensor(x_m_share + R);
+    auto x_hat = reconstructed ? x_m_share : reconstruct_tensor(x_m_share + R);
 
     T two_pow_m_minus_2_val = (m < 2 || m - 2 >= 64) ? 0 : (T(1) << (m - 2));
     FixTensor<T, m, f, k, Rank, Options> const_term_m(x_hat.dimensions());

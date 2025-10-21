@@ -89,14 +89,25 @@ auto elementwise_mul_opt(
     const FixTensor<T, n, f, k, Rank, Options>& ry_msb_n_share,
     const FixTensor<T, n, f, k, Rank, Options>& rxy_n_share,
     const FixTensor<T, n, f, k, Rank, Options>& rx_msby_n_share,
-    const FixTensor<T, n, f, k, Rank, Options>& rxy_msb_n_share
-    // const FixTensor<T, n, f, k, Rank, Options>& rx_msby_msb_n_share
+    const FixTensor<T, n, f, k, Rank, Options>& rxy_msb_n_share,
+    bool x_reconstructed = false,
+    bool y_reconstructed = false
 ) -> FixTensor<T, n, f, k, Rank, Options>
 {
     if (mpc_instance == nullptr) throw std::runtime_error("MPC instance not initialized.");
     
-    auto x_hat = reconstruct_tensor(x_m_share + rx_m_share);
-    auto y_hat = reconstruct_tensor(y_m_share + ry_m_share);
+    auto x_hat = x_m_share;
+    auto y_hat = y_m_share;
+    if (!x_reconstructed && !y_reconstructed){
+        reconstruct_tensor_parallel(x_m_share + rx_m_share, y_m_share + ry_m_share);
+    }
+    else if (x_reconstructed && !y_reconstructed){
+        y_hat = reconstruct_tensor(y_m_share + ry_m_share);
+    }
+    else if (!x_reconstructed && y_reconstructed){
+        x_hat = reconstruct_tensor(x_m_share + rx_m_share);
+    }
+    
 
     T two_pow_m_minus_2_val = (m < 2 || m - 2 >= 64) ? 0 : (T(1) << (m - 2));
     FixTensor<T, m, f, k, Rank, Options> const_term_m(x_hat.dimensions());

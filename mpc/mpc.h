@@ -381,5 +381,92 @@ FixTensorType reconstruct_tensor(const FixTensorType& x_share) {
     return total;
 }
 
+template <typename... FixTensorTypes>
+void reconstruct_tensor_parallel(FixTensorTypes&... tensors) {
+    if (mpc_instance == nullptr) throw std::runtime_error("MPC instance not initialized.");
+    int party = mpc_instance->party;
+    int M = mpc_instance->M;
+
+    // Stage 1: Serialize all tensors into a single buffer and send.
+    for (int i = 0; i < M; ++i) {
+        if (i == party) continue;
+        
+        std::vector<uint8_t> send_buffer;
+        auto serialize_tensor = [&](const auto& tensor) {
+            using TensorType = typename std::decay_t<decltype(tensor)>;
+            using T = typename TensorType::FixType::val_type;
+            constexpr int Rank = TensorType::Base::NumIndices;
+            constexpr int bw = TensorType::FixType::bitwidth;
+
+            const auto& dims = tensor.dimensions();
+            const uint8_t* dims_ptr = reinterpret_cast<const uint8_t*>(dims.data());
+            send_buffer.insert(send_buffer.end(), dims_ptr, dims_ptr + Rank * sizeof(long));
+
+            long long num_elements = tensor.size();
+            if (num_elements > 0) {
+                const T* raw_data = reinterpret_cast<const T*>(tensor.data());
+                std::vector<uint8_t> packed = pack_data(raw_data, num_elements, bw);
+                send_buffer.insert(send_buffer.end(), packed.begin(), packed.end());
+            }
+        };
+        (serialize_tensor(tensors), ...);
+
+        uint64_t buffer_size = send_buffer.size();
+        mpc_instance->peers[i].send_data(&buffer_size, sizeof(buffer_size));
+        if (buffer_size > 0) {
+            mpc_instance->peers[i].send_data(send_buffer.data(), buffer_size);
+        }
+    }
+
+    // Stage 2: Receive the single buffer and deserialize to reconstruct tensors.
+    for (int i = 0; i < M; ++i) {
+        if (i == party) continue;
+
+        uint64_t buffer_size = 0;
+        mpc_instance->peers[i].recv_data(&buffer_size, sizeof(buffer_size));
+
+        std::vector<uint8_t> recv_buffer;
+        if (buffer_size > 0) {
+            recv_buffer.resize(buffer_size);
+            mpc_instance->peers[i].recv_data(recv_buffer.data(), buffer_size);
+        }
+        
+        size_t buffer_offset = 0;
+        auto deserialize_and_add = [&](auto& tensor) {
+            if (buffer_offset >= recv_buffer.size() && recv_buffer.size() > 0) {
+                throw std::runtime_error("Buffer underflow during parallel reconstruction.");
+            }
+            using TensorType = typename std::decay_t<decltype(tensor)>;
+            using T = typename TensorType::FixType::val_type;
+            constexpr int Rank = TensorType::Base::NumIndices;
+            constexpr int bw = TensorType::FixType::bitwidth;
+            constexpr int f = TensorType::FixType::frac_bits;
+            constexpr int k = TensorType::FixType::int_bits;
+            
+            Eigen::array<long, Rank> dims;
+            memcpy(dims.data(), recv_buffer.data() + buffer_offset, Rank * sizeof(long));
+            buffer_offset += Rank * sizeof(long);
+
+            TensorType other_share(dims);
+            long long num_elements = other_share.size();
+
+            if (num_elements > 0) {
+                size_t bytes_to_read = (num_elements * bw + 7) / 8;
+                if (buffer_offset + bytes_to_read > recv_buffer.size()) {
+                    throw std::runtime_error("Buffer underflow reading tensor data.");
+                }
+                
+                std::vector<uint8_t> packed_data(recv_buffer.begin() + buffer_offset, recv_buffer.begin() + buffer_offset + bytes_to_read);
+                buffer_offset += bytes_to_read;
+                
+                std::vector<T> unpacked = unpack_data<T>(packed_data, num_elements, bw);
+                memcpy(other_share.data(), unpacked.data(), num_elements * sizeof(Fix<T, bw, f, k>));
+            }
+            tensor = tensor + other_share;
+        };
+        (deserialize_and_add(tensors), ...);
+    }
+}
+
 
 #endif //SCLIP_MPC_H
