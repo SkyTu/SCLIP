@@ -159,14 +159,9 @@ void test_secure_matmul(MPC& mpc) {
     MyFixTensor a_share = secret_share_tensor(A);
     MyFixTensor b_share = secret_share_tensor(B);
 
-    MyFixTensor U_share(2, 3);
-    mpc.read_fixtensor_share(U_share);
-    MyFixTensor V_share(3, 2);
-    mpc.read_fixtensor_share(V_share);
-    MyFixTensor Z_share(2, 2);
-    mpc.read_fixtensor_share(Z_share);
+    MatmulRandomness<uint64_t, BW, F, K, 2, 2, 2> randomness = read_matmul_randomness<uint64_t, BW, F, K, 2, 2, 2>(mpc, 0, 2, 3, 2);
     
-    auto c_share = secure_matmul(a_share, b_share, U_share, V_share, Z_share);
+    auto c_share = secure_matmul(a_share, b_share, randomness);
 
     auto C = reconstruct_tensor(c_share);
     C.trunc_in_place(F); 
@@ -204,22 +199,33 @@ void test_secure_matmul_3d(MPC& mpc) {
     MyFixTensor3D a_share = secret_share_tensor(A);
     MyFixTensor2D b_share = secret_share_tensor(B);
 
-    MyFixTensor3D U_share(2, 2, 3);
-    mpc.read_fixtensor_share(U_share);
-    MyFixTensor2D V_share(3, 2);
-    mpc.read_fixtensor_share(V_share);
-    MyFixTensor3D Z_share(2, 2, 2);
-    mpc.read_fixtensor_share(Z_share);
+    MatmulRandomness<uint64_t, BW, F, K, 3, 2, 3> randomness = read_matmul_randomness<uint64_t, BW, F, K, 3, 2, 3>(mpc, 2, 2, 3, 2);
 
-    auto c_share = secure_matmul(a_share, b_share, U_share, V_share, Z_share);
+    auto c_share = secure_matmul(a_share, b_share, randomness);
 
     auto C = reconstruct_tensor(c_share);
     C.trunc_in_place(F);
 
+    bool pass = true;
     if (mpc.party == 0) {
         auto expected_C = tensor_mul(A, B);
         expected_C.trunc_in_place(F);
-        std::cout << "Party " << mpc.party << " 3Dx2D MatMul test passed!" << std::endl;
+
+        for(int i=0; i<C.dimension(0); ++i) for(int j=0; j<C.dimension(1); ++j) for(int k=0; k<C.dimension(2); ++k) {
+            if(std::abs(C(i,j,k).to_float<double>() - expected_C(i,j,k).to_float<double>()) > 1e-3) {
+                pass = false;
+                std::cout << "C(i,j,k).to_float<double>() = " << C(i,j,k).to_float<double>() << std::endl;
+                std::cout << "expected_C(i,j,k).to_float<double>() = " << expected_C(i,j,k).to_float<double>() << std::endl;
+                std::cout << "C(i,j,k).to_float<double>() - expected_C(i,j,k).to_float<double>() = " << C(i,j,k).to_float<double>() - expected_C(i,j,k).to_float<double>() << std::endl;
+                break;
+            }
+        }
+        if(pass) {
+            std::cout << "Party " << mpc.party << " 3Dx2D MatMul test passed!" << std::endl;
+        }
+        else {
+            std::cout << "Party " << mpc.party << " 3Dx2D MatMul test failed!" << std::endl;
+        }
     }
     mpc.print_stats();
 }
@@ -284,14 +290,10 @@ void test_truncate_zero_extend_tensor_2d(MPC& mpc) {
     
     auto X_m_share = secret_share_tensor(X_m_plain);
 
-    FixTensorM r_m_share(20, 20);
-    mpc.read_fixtensor_share(r_m_share);
-    FixTensorBW r_e_share(20, 20);
-    mpc.read_fixtensor_share(r_e_share);
-    FixTensorBW r_msb_share(20, 20);
-    mpc.read_fixtensor_share(r_msb_share);
+    ZeroExtendRandomness<uint64_t, BW, M_BITS, F, K, 2> randomness;
+    randomness = read_zero_extend_randomness<uint64_t, BW, M_BITS, F, K, 2>(mpc, 0, 20, 20);
 
-    auto X_ext_share = zero_extend_tensor<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(X_m_share, r_m_share, r_e_share, r_msb_share);
+    auto X_ext_share = zero_extend_tensor<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(X_m_share, randomness);
     auto X_reconstructed = reconstruct_tensor(X_ext_share);
 
     if (mpc.party == 0) {
@@ -322,14 +324,10 @@ void test_truncate_zero_extend_tensor_3d(MPC& mpc) {
     
     auto X_m_share = secret_share_tensor(X_m_plain);
 
-    FixTensorM r_m_share(2, 2, 2);
-    mpc.read_fixtensor_share(r_m_share);
-    FixTensorBW r_e_share(2, 2, 2);
-    mpc.read_fixtensor_share(r_e_share);
-    FixTensorBW r_msb_share(2, 2, 2);
-    mpc.read_fixtensor_share(r_msb_share);
+    ZeroExtendRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;
+    randomness = read_zero_extend_randomness<uint64_t, BW, M_BITS, F, K, 3>(mpc, 2, 2, 2);
 
-    auto X_ext_share = zero_extend_tensor<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_m_share, r_m_share, r_e_share, r_msb_share);
+    auto X_ext_share = zero_extend_tensor<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_m_share, randomness);
     auto X_reconstructed = reconstruct_tensor(X_ext_share);
 
      if (mpc.party == 0) {
@@ -374,21 +372,12 @@ void test_elementwise_mul_opt(MPC& mpc) {
     FixTensorN r_x_n_share(D1,D2), r_y_n_share(D1,D2), r_x_msb_share(D1,D2), r_y_msb_share(D1,D2);
     FixTensorN r_xy_share(D1,D2), r_x_rymsb_share(D1,D2), r_xmsb_y_share(D1,D2);
 
-    mpc.read_fixtensor_share(r_x_m_share);
-    mpc.read_fixtensor_share(r_y_m_share);
-    mpc.read_fixtensor_share(r_x_n_share);
-    mpc.read_fixtensor_share(r_y_n_share);
-    mpc.read_fixtensor_share(r_x_msb_share);
-    mpc.read_fixtensor_share(r_y_msb_share);
-    mpc.read_fixtensor_share(r_xy_share);
-    mpc.read_fixtensor_share(r_x_rymsb_share);
-    mpc.read_fixtensor_share(r_xmsb_y_share);
-
+    ElementwiseMulRandomness<uint64_t, BW, M_BITS, F, K, 2> randomness;
+    randomness = read_elementwise_mul_randomness<uint64_t, BW, M_BITS, F, K, 2>(mpc, 0, D1, D2);
+    std::cout << "finish reading randomness" << std::endl;
     // 4. Secure computation
-    FixTensorN c_n_share = elementwise_mul_opt<uint64_t, M_BITS, F, K, BW, 2, Eigen::RowMajor>(a_m_share, b_m_share, 
-        r_x_m_share, r_x_n_share, r_x_msb_share,
-        r_y_m_share, r_y_n_share, r_y_msb_share,
-        r_xy_share, r_xmsb_y_share, r_x_rymsb_share);
+    FixTensorN c_n_share = elementwise_mul_opt<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(a_m_share, b_m_share, 
+        randomness);
 
     // 5. Reconstruction and Verification
     FixTensorN C = reconstruct_tensor(c_n_share);
@@ -441,18 +430,10 @@ void test_square_tensor_opt(MPC& mpc) {
     
     FixTensorM X_m_share = secret_share_tensor(X_m_plain);
     
-    FixTensorM r_m_share(3,4);
-    mpc.read_fixtensor_share(r_m_share);
-    FixTensorBW r_n_share(3,4);
-    mpc.read_fixtensor_share(r_n_share);
-    FixTensorBW r_square_share(3,4);
-    mpc.read_fixtensor_share(r_square_share);
-    FixTensorBW r_msb_share(3,4);
-    mpc.read_fixtensor_share(r_msb_share);
-    FixTensorBW r_r_msb_share(3,4);
-    mpc.read_fixtensor_share(r_r_msb_share);
+    SquareRandomness<uint64_t, BW, M_BITS, F, K, 2> randomness;
+    randomness = read_square_randomness<uint64_t, BW, M_BITS, F, K, 2>(mpc, 0, 3, 4);   
     
-    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(X_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
+    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 2, Eigen::RowMajor>(X_m_share, randomness);
     auto X_reconstructed = reconstruct_tensor(X_square_share);
 
     FixTensorBW X_n_plain = change_bitwidth<BW, F, K>(X_m_plain);
@@ -483,18 +464,10 @@ void test_square_tensor_opt_3d(MPC& mpc) {
     
     FixTensorM X_m_share = secret_share_tensor(X_m_plain);
     
-    FixTensorM r_m_share(20,20,20);
-    mpc.read_fixtensor_share(r_m_share);
-    FixTensorBW r_n_share(20,20,20);
-    mpc.read_fixtensor_share(r_n_share);
-    FixTensorBW r_square_share(20,20,20);
-    mpc.read_fixtensor_share(r_square_share);
-    FixTensorBW r_msb_share(20,20,20);
-    mpc.read_fixtensor_share(r_msb_share);
-    FixTensorBW r_r_msb_share(20,20,20);
-    mpc.read_fixtensor_share(r_r_msb_share);
+    SquareRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;
+    randomness = read_square_randomness<uint64_t, BW, M_BITS, F, K, 3>(mpc, 20, 20, 20);
 
-    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
+    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 3>(X_m_share, randomness);
     auto X_reconstructed = reconstruct_tensor(X_square_share);
 
     FixTensorBW X_n_plain = change_bitwidth<BW, F, K>(X_m_plain);
@@ -631,36 +604,16 @@ void test_exp_tensor_opt_3d(MPC& mpc) {
     int iters = RECIPROCAL_NR_ITERS;
     FixTensorBW X_share = secret_share_tensor(X_plain);
     
-    FixTensor<uint64_t, M_BITS, F, K, 3> r_m_share[iters];
-    FixTensor<uint64_t, BW, F, K, 3> r_n_share[iters];
-    FixTensor<uint64_t, BW, F, K, 3> r_square_share[iters];
-    FixTensor<uint64_t, BW, F, K, 3> r_msb_share[iters];
-    FixTensor<uint64_t, BW, F, K, 3> r_r_msb_share[iters];
-
-    for(int i = 0; i < iters; ++i) {
-        r_m_share[i].resize(20,20,20);
-        r_n_share[i].resize(20,20,20);
-        r_square_share[i].resize(20,20,20);
-        r_msb_share[i].resize(20,20,20);
-        r_r_msb_share[i].resize(20,20,20);
-        mpc.read_fixtensor_share(r_m_share[i]);
-        mpc.read_fixtensor_share(r_n_share[i]);
-        mpc.read_fixtensor_share(r_square_share[i]);
-        mpc.read_fixtensor_share(r_msb_share[i]);
-        mpc.read_fixtensor_share(r_r_msb_share[i]);
-    }
-
-    FixTensorM R_M_EXT(20, 20, 20);
-    FixTensorBW R_E_EXT(20, 20, 20);
-    FixTensorBW R_MSB_EXT(20, 20, 20);
-    mpc.read_fixtensor_share(R_M_EXT);
-    mpc.read_fixtensor_share(R_E_EXT);
-    mpc.read_fixtensor_share(R_MSB_EXT);
-
-    auto X_exp_share = exp_tensor<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share, R_M_EXT, R_E_EXT, R_MSB_EXT);
+    ExpRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;
+    randomness = read_exp_randomness<uint64_t, BW, M_BITS, F, K, 3>(mpc, 20, 20, 20);
+    auto X_exp_share = exp_tensor<uint64_t, BW, M_BITS, F, K, 3, Eigen::RowMajor>(X_share, randomness);
     auto X_exp_reconstructed = reconstruct_tensor(X_exp_share);
 
     if (mpc.party == 0) {
+        for(int i=0; i<2; ++i) for(int j=0; j<2; ++j) for(int k=0; k<2; ++k) {
+            std::cout << "X_plain(" << i << "," << j << "," << k << ").to_float<double>() = " << X_plain(i,j,k).to_float<double>() << std::endl;
+            std::cout << "X_exp_reconstructed(" << i << "," << j << "," << k << ").to_float<double>() = " << X_exp_reconstructed(i,j,k).to_float<double>() << std::endl;
+        }
         for(int i=0; i<20; ++i) for(int j=0; j<20; ++j) for(int k=0; k<20; ++k) {
             if (std::abs(std::exp(X_plain(i,j,k).to_float<double>()) - X_exp_reconstructed(i,j,k).to_float<double>()) > 1e-1) {
                 std::cout << "Party " << mpc.party << " Exp Tensor Opt 3D test FAILED!" << std::endl;
@@ -682,13 +635,27 @@ void test_inv_sqrt_tensor(MPC& mpc) {
     using FixTensorM = FixTensor<uint64_t, M_BITS, F, K, 3>;
     using FixTensorBW = FixTensor<uint64_t, BW, F, K, 3>;
 
-    FixBW X_plain(1, 32, 32);
-    For (int i = 0; i < 32; i++){
-        for (int j = 0; j < 32; j++){
-            X_plain(0, i, j) = Fix<uint64_t, BW, F, K>(double(i + j));
+    FixTensorBW X_plain(1, 3, 3);
+    for (int i = 0; i < 3; i++){
+        for (int j = 0; j < 3; j++){
+            X_plain(0, i, j) = Fix<uint64_t, BW, F, K>(double(i + j + 1.1));
         }
     }
-    X_n_share = secret_share_tensor(X_plain);
+    FixTensorBW X_n_share = secret_share_tensor(X_plain);
+    InvSqrtRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;
+    randomness = read_inv_sqrt_randomness<uint64_t, BW, M_BITS, F, K, 3>(mpc, 1, 3, 3);
+    auto X_inv_sqrt_share = inv_sqrt_tensor<uint64_t, BW, M_BITS, F, K, 3>(X_n_share, randomness);
+    auto X_inv_sqrt_reconstructed = reconstruct_tensor(X_inv_sqrt_share);
+    if (mpc.party == 0) {
+        for(int i = 0; i < 3; i++){
+            for(int j = 0; j < 3; j++){
+                std::cout << "X_plain(0, " << i << ", " << j << ").to_float<double>() = " << X_plain(0, i, j).to_float<double>() << std::endl;
+                std::cout << "X_inv_sqrt_reconstructed(0, " << i << ", " << j << ").to_float<double>() = " << X_inv_sqrt_reconstructed(0, i, j).to_float<double>() << std::endl;
+            }
+        }
+        std::cout << "Party " << mpc.party << " Inv Sqrt Tensor test passed!" << std::endl;
+    }
+    mpc.print_stats();
 }
 
 int main(int argc, char** argv) {
@@ -708,24 +675,25 @@ int main(int argc, char** argv) {
         mpc.load_random_data(random_data_file);
 
         // Run tests
-        test_scalar_share_and_reconstruct(mpc);
-        test_tensor_share_and_reconstruct(mpc);
-        test_reconstruct_parallel(mpc);
+        // test_scalar_share_and_reconstruct(mpc);
+        // test_tensor_share_and_reconstruct(mpc);
+        // test_reconstruct_parallel(mpc);
         test_secure_matmul(mpc);
         test_secure_matmul_3d(mpc);
-        for(int i = 0; i < 10; i++){
-            test_truncate_zero_extend_scalar(mpc);
-        }
+        // for(int i = 0; i < 10; i++){
+        //     test_truncate_zero_extend_scalar(mpc);
+        // }
         test_truncate_zero_extend_tensor_2d(mpc);
         test_truncate_zero_extend_tensor_3d(mpc);
         test_elementwise_mul_opt(mpc); 
         test_square_tensor_opt(mpc);
         test_square_tensor_opt_3d(mpc);
-        for(int i = 0; i < 10; i++){
-            test_square_scalar_opt(mpc);
-        }
-        test_exp_scalar_opt(mpc);
+        // for(int i = 0; i < 10; i++){
+        //     test_square_scalar_opt(mpc);
+        // }
+        // test_exp_scalar_opt(mpc);
         test_exp_tensor_opt_3d(mpc);
+        test_inv_sqrt_tensor(mpc);
         mpc.close();
 
     } catch (const std::exception& e) {

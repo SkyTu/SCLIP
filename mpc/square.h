@@ -7,6 +7,40 @@
 #include "utils/random.h"
 #include "utils/config.h"
 
+template <typename T, int n, int m, int f, int k, int Rank>
+struct SquareRandomness{
+    FixTensor<T, m, f, k, Rank> R;
+    FixTensor<T, n, f, k, Rank> R_N;
+    FixTensor<T, n, f, k, Rank> R_SQUARE;
+    FixTensor<T, n, f, k, Rank> R_MSB;
+    FixTensor<T, n, f, k, Rank> R_R_MSB;
+};
+
+template <typename T, int n, int m, int f, int k, int Rank>
+SquareRandomness<T, n, m, f, k, Rank> read_square_randomness(MPC& mpc, int batch, int row, int col){
+    SquareRandomness<T, n, m, f, k, Rank> randomness;
+    if constexpr(Rank == 3){
+        randomness.R.resize(batch, row, col);
+        randomness.R_N.resize(batch, row, col);
+        randomness.R_SQUARE.resize(batch, row, col);
+        randomness.R_MSB.resize(batch, row, col);
+        randomness.R_R_MSB.resize(batch, row, col);
+    }
+    else{
+        randomness.R.resize(row, col);
+        randomness.R_N.resize(row, col);
+        randomness.R_SQUARE.resize(row, col);
+        randomness.R_MSB.resize(row, col);
+        randomness.R_R_MSB.resize(row, col);
+    }
+    mpc.read_fixtensor_share(randomness.R);
+    mpc.read_fixtensor_share(randomness.R_N);
+    mpc.read_fixtensor_share(randomness.R_SQUARE);
+    mpc.read_fixtensor_share(randomness.R_MSB);
+    mpc.read_fixtensor_share(randomness.R_R_MSB);
+    return randomness;
+}
+
 template <typename T, int Rank>
 int get_square_random_size(int batch, int row, int col){
     size_t m_size = 0;
@@ -121,9 +155,9 @@ Fix<T, n, f, k> square_scalar_opt(Fix<T, m, f, k>x_m_share, Fix<T, m, f, k> R, F
 
 //extend & square
 template <typename T, int n, int m, int f, int k, int Rank, int Options>
-FixTensor<T, n, f, k, Rank, Options> square_tensor_opt(FixTensor<T, m, f, k, Rank, Options> x_m_share, FixTensor<T, m, f, k, Rank, Options> R, FixTensor<T, n, f, k, Rank, Options> R_N, FixTensor<T, n, f, k, Rank, Options> R_SQUARE, FixTensor<T, n, f, k, Rank, Options> R_MSB, FixTensor<T, n, f, k, Rank, Options> R_R_MSB, bool reconstructed = false)
+FixTensor<T, n, f, k, Rank, Options> square_tensor_opt(FixTensor<T, m, f, k, Rank, Options> x_m_share, SquareRandomness<T, n, m, f, k, Rank> randomness, bool reconstructed = false)
 {
-    auto x_hat = reconstructed ? x_m_share : reconstruct_tensor(x_m_share + R);
+    auto x_hat = reconstructed ? x_m_share : reconstruct_tensor(x_m_share + randomness.R);
 
     T two_pow_m_minus_2_val = (m < 2 || m - 2 >= 64) ? 0 : (T(1) << (m - 2));
     FixTensor<T, m, f, k, Rank, Options> const_term_m(x_hat.dimensions());
@@ -151,8 +185,8 @@ FixTensor<T, n, f, k, Rank, Options> square_tensor_opt(FixTensor<T, m, f, k, Ran
     else{
         term1.setConstant(Fix<T,n,f,k>(0));
     }
-    auto term2 = x_hat_prime_n * R_N;
-    auto term3 = x_hat_prime_n * t_x * R_MSB;
-    auto term4 = t_x * R_R_MSB;
-    return term1 + R_SQUARE - term2 - term2 + term3 + term3 - term4 - term4;
+    auto term2 = x_hat_prime_n * randomness.R_N;
+    auto term3 = x_hat_prime_n * t_x * randomness.R_MSB;
+    auto term4 = t_x * randomness.R_R_MSB;
+    return term1 + randomness.R_SQUARE - term2 - term2 + term3 + term3 - term4 - term4;
 }

@@ -126,9 +126,6 @@ public:
     }
 
     Fix<T, bw, f, k> operator*(const Fix<T, bw, f, k>& other) const {
-        // Widening multiplication to prevent overflow of the raw product.
-        // The result remains in 2*f fractional bit format and must be truncated later
-        // by a function like trunc() or within a protocol like tensor_mul.
         T temp = val * other.val;
         return Fix<T, bw, f, k>(temp);
     }

@@ -7,558 +7,442 @@ g++ -pthread -o test/mpc/test_mpc_primitives test/mpc/test_mpc_primitives.o mpc/
 Dealer starting...
 total_size: 128
 total_size: 336
-total_size: 576
-total_size: 10176
-total_size: 10368
-total_size: 11232
-total_size: 11712
-total_size: 331712
-total_size: 332112
-Total size per party: 3724536 bytes.
-p0_offset: 128, p1_offset: 128, total_size: 3724536
-p0_offset: 336, p1_offset: 336, total_size: 3724536
-p0_offset: 576, p1_offset: 576, total_size: 3724536
-p0_offset: 10176, p1_offset: 10176, total_size: 3724536
-p0_offset: 10368, p1_offset: 10368, total_size: 3724536
-p0_offset: 11232, p1_offset: 11232, total_size: 3724536
-p0_offset: 11712, p1_offset: 11712, total_size: 3724536
-p0_offset: 331712, p1_offset: 331712, total_size: 3724536
-p0_offset: 332112, p1_offset: 332112, total_size: 3724536
-p0_offset: 3724536, p1_offset: 3724536, total_size: 3724536
+total_size: 9936
+total_size: 10128
+total_size: 10992
+total_size: 11472
+total_size: 331472
+Total size per party: 3723472 bytes.
+total_size: 3744064
+p0_offset: 128, p1_offset: 128, total_size: 3744064
+p0_offset: 336, p1_offset: 336, total_size: 3744064
+p0_offset: 9936, p1_offset: 9936, total_size: 3744064
+p0_offset: 10128, p1_offset: 10128, total_size: 3744064
+p0_offset: 10992, p1_offset: 10992, total_size: 3744064
+p0_offset: 11472, p1_offset: 11472, total_size: 3744064
 Dealer finished successfully.
-[Party 1] Connecting to Party 0 on port 9002...
 [Party 0] Listening for Party 1 on port 9002...
+[Party 1] Connecting to Party 0 on port 9002...
 [Party 1] <-> [Party 0] connection established.
 [Party 0] <-> [Party 1] connection established.
 
---- Testing Scalar Share and Reconstruct for Party 1/2 ---
-
---- Testing Scalar Share and Reconstruct for Party 0/2 ---
-finish secret sharing
-finish secret sharing
-finish reconstruction
-finish reconstruction
-Party 1 Scalar Share/Reconstruct test passed!
-Party 0 Scalar Share/Reconstruct test passed!
-Party 1 Stats --- Sent: 8 bytes, Received: 16 bytes
-Party 0 Stats --- Sent: 16 bytes, Received: 8 bytes
-
---- Testing Tensor Share and Reconstruct for Party 1/2 ---
-
---- Testing Tensor Share and Reconstruct for Party 0/2 ---
-Original A:
-Party 1 Stats --- Sent: 64 bytes, Received: 128 bytes
-Reconstructed A:
+--- Testing Secure MatMul 2D for Party 0/2 ---
 
 --- Testing Secure MatMul 2D for Party 1/2 ---
-Party 0 Tensor Share/Reconstruct test passed!
-Party 0 Stats --- Sent: 128 bytes, Received: 64 bytes
-
---- Testing Secure MatMul 2D for Party 0/2 ---
-Party 1 Stats --- Sent: 176 bytes, Received: 304 bytes
+Party 1 Stats --- Sent: 184 bytes, Received: 312 bytes
+Party 0 2Dx2D MatMul test passed!
 
 --- Testing Secure MatMul 3Dx2D for Party 1/2 ---
-Party 0 2Dx2D MatMul test passed!
-Party 0 Stats --- Sent: 304 bytes, Received: 176 bytes
+Party 0 Stats --- Sent: 312 bytes, Received: 184 bytes
 
 --- Testing Secure MatMul 3Dx2D for Party 0/2 ---
-Party 1 Stats --- Sent: 272 bytes, Received: 456 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Party 0 3Dx2D MatMul test passed!
-Party 0 Stats --- Sent: 456 bytes, Received: 272 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Original (after trunc): -6.10352e-05
-Reconstructed (after extend): -6.10352e-05
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Original (after trunc): -6.10352e-05
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Reconstructed (after extend): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Original (after trunc): -6.10352e-05
-Reconstructed (after extend): -6.10352e-05
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Party 0 Truncate/Zero Extend Scalar test passed!
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Original (after trunc): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Reconstructed (after extend): -6.10352e-05
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Original (after trunc): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Reconstructed (after extend): -6.10352e-05
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Original (after trunc): -6.10352e-05
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Reconstructed (after extend): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Original (after trunc): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Reconstructed (after extend): -6.10352e-05
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Original (after trunc): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Reconstructed (after extend): -6.10352e-05
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Original (after trunc): -6.10352e-05
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Reconstructed (after extend): -6.10352e-05
-
---- Testing Truncate/Zero Extend Scalar for Party 1/2 ---
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Truncate/Zero Extend Scalar for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Original (after trunc): -6.10352e-05
+Party 1 Stats --- Sent: 280 bytes, Received: 464 bytes
 
 --- Testing Truncate/Zero Extend 2D Tensor for Party 1/2 ---
-Reconstructed (after extend): -6.10352e-05
-Party 0 Truncate/Zero Extend Scalar test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
+Party 0 3Dx2D MatMul test passed!
+Party 0 Stats --- Sent: 464 bytes, Received: 280 bytes
 
 --- Testing Truncate/Zero Extend 2D Tensor for Party 0/2 ---
-0.612381 0.612381
-0.452911 0.452911
-0.17392 0.17392
-0.36972 0.36972
-0.770416 0.770416
-0.307663 0.307663
-0.0545502 0.0545502
-0.756683 0.756683
-0.34404 0.34404
-0.981247 0.981247
-0.0280762 0.0280762
-0.654434 0.654434
-0.391479 0.391479
-0.761612 0.761612
-0.265015 0.265015
-0.611725 0.611725
-0.125473 0.125473
-0.869446 0.869446
-0.897827 0.897827
-0.992859 0.992859
-0.934143 0.934143
-0.876312 0.876312
-0.908783 0.908783
-0.300217 0.300217
-0.816345 0.816345
-0.619873 0.619873
-0.0741425 0.0741425
-0.879471 0.879471
-0.347122 0.347122
-0.51712 0.51712
-0.212738 0.212738
-0.810043 0.810043
-0.764572 0.764572
-0.739746 0.739746
-0.0920563 0.0920563
-0.136246 0.136246
-0.916748 0.916748
-0.730438 0.730438
-0.614502 0.614502
-0.0226746 0.0226746
-0.344498 0.344498
-0.897842 0.897842
-0.113129 0.113129
-0.408035 0.408035
-0.772339 0.772339
-0.0179291 0.0179291
-0.271683 0.271683
-0.41153 0.41153
-0.875259 0.875259
-0.900604 0.900604
-0.542358 0.542358
-0.0141602 0.0141602
-0.155716 0.155716
-0.397247 0.397247
-0.00999451 0.00999451
-0.480743 0.480743
-0.641541 0.641541
-0.559952 0.559952
-0.897369 0.897369
-0.942184 0.942184
-0.147858 0.147858
-0.411697 0.411697
-0.678024 0.678024
-0.596771 0.596771
-0.376038 0.376038
-0.211472 0.211472
-0.570709 0.570709
-0.746613 0.746613
-0.540833 0.540833
-0.952286 0.952286
-0.768448 0.768448
-0.966858 0.966858
-0.528015 0.528015
-0.168701 0.168701
-0.375748 0.375748
-0.529449 0.529449
-0.931717 0.931717
-0.808945 0.808945
-0.917648 0.917648
-0.473389 0.473389
-0.0805054 0.0805054
-0.698746 0.698746
-0.862396 0.862396
-0.421539 0.421539
-0.961823 0.961823
-0.660904 0.660904
-0.107147 0.107147
-0.225494 0.225494
-0.58139 0.58139
-0.574432 0.574432
-0.729904 0.729904
-0.170441 0.170441
-0.378876 0.378876
-0.365494 0.365494
-0.673508 0.673508
-0.676178 0.676178
-0.388687 0.388687
-0.214127 0.214127
-0.603256 0.603256
-0.0987091 0.0987091
-0.00512695 0.00512695
-0.530701 0.530701
-0.0645905 0.0645905
-0.749985 0.749985
-0.923965 0.923965
-0.0239105 0.0239105
-0.28273 0.28273
-0.601044 0.601044
-0.394867 0.394867
-0.401367 0.401367
-0.83316 0.83316
-0.268005 0.268005
-0.836945 0.836945
-0.332489 0.332489
-0.836838 0.836838
-0.0386658 0.0386658
-0.370544 0.370544
-0.658737 0.658737
-0.164322 0.164322
-0.80426 0.80426
-0.106415 0.106415
-0.975693 0.975693
-0.0475616 0.0475616
-0.997574 0.997574
-0.319336 0.319336
-0.485199 0.485199
-0.938995 0.938995
-0.84169 0.84169
-0.693817 0.693817
-0.872894 0.872894
-0.42395 0.42395
-0.966782 0.966782
-0.0370331 0.0370331
-0.0510254 0.0510254
-0.20488 0.20488
-0.313019 0.313019
-0.938904 0.938904
-0.278671 0.278671
-0.950378 0.950378
-0.0237885 0.0237885
-0.446457 0.446457
-0.694641 0.694641
-0.684265 0.684265
-0.292053 0.292053
-0.591034 0.591034
-0.59993 0.59993
-0.854279 0.854279
-0.939606 0.939606
-0.0182953 0.0182953
-0.712646 0.712646
-0.347824 0.347824
-0.349594 0.349594
-0.110687 0.110687
-0.914627 0.914627
-0.849335 0.849335
-0.404785 0.404785
-0.995361 0.995361
-0.421158 0.421158
-0.403473 0.403473
-0.935684 0.935684
-0.71199 0.71199
-0.690399 0.690399
-0.43042 0.43042
-0.023407 0.023407
-0.321487 0.321487
-0.402206 0.402206
-0.518112 0.518112
-0.304779 0.304779
-0.159012 0.159012
-0.0770569 0.0770569
-0.50856 0.50856
-0.969711 0.969711
-0.589172 0.589172
-0.726624 0.726624
-0.405502 0.405502
-0.420822 0.420822
-0.723068 0.723068
-0.319504 0.319504
-0.928238 0.928238
-0.58548 0.58548
-0.2043 0.2043
-0.271164 0.271164
-0.599487 0.599487
-0.117401 0.117401
-0.377136 0.377136
-0.646042 0.646042
-0.338028 0.338028
-0.591217 0.591217
-0.696106 0.696106
-0.350693 0.350693
-0.241287 0.241287
-0.594788 0.594788
-0.66835 0.66835
-0.975769 0.975769
-0.604431 0.604431
-0.816284 0.816284
-0.715897 0.715897
-0.0415497 0.0415497
-0.749771 0.749771
-0.878876 0.878876
-0.390091 0.390091
-0.506531 0.506531
-0.985489 0.985489
-0.475281 0.475281
-0.198242 0.198242
-0.751144 0.751144
-0.42485 0.42485
-0.492554 0.492554
-0.190536 0.190536
-0.425766 0.425766
-0.965057 0.965057
-0.735214 0.735214
-0.231583 0.231583
-0.703125 0.703125
-0.770004 0.770004
-0.328979 0.328979
-0.132874 0.132874
-0.877808 0.877808
-0.309372 0.309372
-0.216751 0.216751
-0.0480652 0.0480652
-0.0059967 0.0059967
-0.784332 0.784332
-0.619553 0.619553
-0.796509 0.796509
-0.215988 0.215988
-0.81311 0.81311
-0.309357 0.309357
-0.993988 0.993988
-0.612167 0.612167
-0.567352 0.567352
-0.142014 0.142014
-0.551529 0.551529
-0.371094 0.371094
-0.248245 0.248245
-0.282211 0.282211
-0.470337 0.470337
-0.554657 0.554657
-0.661362 0.661362
-0.68042 0.68042
-0.0657043 0.0657043
-0.261276 0.261276
-0.185822 0.185822
-0.190353 0.190353
-0.974655 0.974655
-0.786713 0.786713
-0.725754 0.725754
-0.61911 0.61911
-0.738113 0.738113
-0.839462 0.839462
-0.108932 0.108932
-0.27832 0.27832
-0.189316 0.189316
-0.123337 0.123337
-0.0586548 0.0586548
-0.436722 0.436722
-0.451813 0.451813
-0.817261 0.817261
-0.626953 0.626953
-0.195618 0.195618
-0.873047 0.873047
-0.794952 0.794952
-0.910965 0.910965
-0.359268 0.359268
-0.0960083 0.0960083
-0.52298 0.52298
-0.451752 0.451752
-0.943802 0.943802
-0.867081 0.867081
+0.462753 0.462753
+0.0866241 0.0866241
+0.659561 0.659561
+0.362457 0.362457
+0.0739899 0.0739899
+0.464081 0.464081
+0.950119 0.950119
+0.54982 0.54982
+0.848709 0.848709
+0.066452 0.066452
+0.910492 0.910492
+0.372681 0.372681
+0.414948 0.414948
+0.514557 0.514557
+0.982788 0.982788
+0.555328 0.555328
+0.993027 0.993027
+0.120499 0.120499
+0.204941 0.204941
+0.449585 0.449585
+0.804855 0.804855
+0.778275 0.778275
+0.15564 0.15564
+0.266541 0.266541
+0.297455 0.297455
+0.544128 0.544128
+0.769379 0.769379
+0.0113373 0.0113373
+0.928864 0.928864
+0.837601 0.837601
+0.423935 0.423935
+0.218735 0.218735
+0.231415 0.231415
+0.0251617 0.0251617
+0.909866 0.909866
+0.284119 0.284119
+0.0748138 0.0748138
+0.33873 0.33873
+0.599274 0.599274
+0.595169 0.595169
+0.29512 0.29512
+0.9897 0.9897
+0.379303 0.379303
+0.603531 0.603531
+0.392593 0.392593
+0.989883 0.989883
+0.968445 0.968445
+0.718048 0.718048
+0.0496063 0.0496063
+0.0802307 0.0802307
+0.561646 0.561646
+0.160934 0.160934
+0.314392 0.314392
+0.190445 0.190445
+0.294861 0.294861
+0.0863647 0.0863647
+0.459045 0.459045
+0.764984 0.764984
+0.76358 0.76358
+0.875198 0.875198
+0.744171 0.744171
+0.308533 0.308533
+0.824982 0.824982
+0.622299 0.622299
+0.910172 0.910172
+0.839386 0.839386
+0.534195 0.534195
+0.193985 0.193985
+0.419159 0.419159
+0.119751 0.119751
+0.457397 0.457397
+0.784637 0.784637
+0.621689 0.621689
+0.852737 0.852737
+0.192993 0.192993
+0.166077 0.166077
+0.613663 0.613663
+0.588318 0.588318
+0.853409 0.853409
+0.23143 0.23143
+0.000488281 0.000488281
+0.357819 0.357819
+0.894135 0.894135
+0.209671 0.209671
+0.792496 0.792496
+0.939529 0.939529
+0.721985 0.721985
+0.0263519 0.0263519
+0.00170898 0.00170898
+0.679398 0.679398
+0.944153 0.944153
+0.34964 0.34964
+0.489029 0.489029
+0.27977 0.27977
+0.556137 0.556137
+0.019928 0.019928
+0.871674 0.871674
+0.417267 0.417267
+0.418854 0.418854
+0.0597839 0.0597839
+0.678772 0.678772
+0.10643 0.10643
+0.849472 0.849472
+0.678085 0.678085
+0.00590515 0.00590515
+0.434036 0.434036
+0.28688 0.28688
+0.117615 0.117615
+0.372894 0.372894
+0.226028 0.226028
+0.54129 0.54129
+0.882812 0.882812
+0.595551 0.595551
+0.774429 0.774429
+0.074646 0.074646
+0.506607 0.506607
+0.303757 0.303757
+0.134506 0.134506
+0.797623 0.797623
+0.558762 0.558762
+0.5345 0.5345
+0.494797 0.494797
+0.801895 0.801895
+0.255829 0.255829
+0.895065 0.895065
+0.608261 0.608261
+0.764359 0.764359
+0.603699 0.603699
+0.30011 0.30011
+0.898621 0.898621
+0.991379 0.991379
+0.142319 0.142319
+0.768341 0.768341
+0.0737457 0.0737457
+0.254776 0.254776
+0.659866 0.659866
+0.39859 0.39859
+0.633972 0.633972
+0.777618 0.777618
+0.634003 0.634003
+0.33165 0.33165
+0.443573 0.443573
+0.708633 0.708633
+0.952698 0.952698
+0.124405 0.124405
+0.442398 0.442398
+0.612885 0.612885
+0.549072 0.549072
+0.386658 0.386658
+0.034317 0.034317
+0.461029 0.461029
+0.627426 0.627426
+0.887848 0.887848
+0.0720367 0.0720367
+0.660202 0.660202
+0.123276 0.123276
+0.821274 0.821274
+0.546875 0.546875
+0.0751495 0.0751495
+0.574203 0.574203
+0.440811 0.440811
+0.792252 0.792252
+0.784241 0.784241
+0.415787 0.415787
+0.0488739 0.0488739
+0.32753 0.32753
+0.336578 0.336578
+0.533249 0.533249
+0.635269 0.635269
+0.679199 0.679199
+0.426285 0.426285
+0.0201874 0.0201874
+0.756393 0.756393
+0.260834 0.260834
+0.0414734 0.0414734
+0.981796 0.981796
+0.534363 0.534363
+0.562164 0.562164
+0.827576 0.827576
+0.462524 0.462524
+0.0133514 0.0133514
+0.0522614 0.0522614
 0.430313 0.430313
-0.429779 0.429779
+0.398834 0.398834
+0.338135 0.338135
+0.740433 0.740433
+0.550903 0.550903
+0.444946 0.444946
+0.177658 0.177658
+0.732452 0.732452
+0.838913 0.838913
+0.793625 0.793625
+0.330353 0.330353
+0.0704346 0.0704346
+0.539703 0.539703
+0.70575 0.70575
+0.0321198 0.0321198
+0.0241547 0.0241547
+0.652664 0.652664
+0.0970306 0.0970306
+0.658234 0.658234
+0.633469 0.633469
+0.884232 0.884232
+0.241089 0.241089
+0.419815 0.419815
+0.101959 0.101959
+0.129913 0.129913
+0.875366 0.875366
+0.609924 0.609924
+0.11554 0.11554
+0.312607 0.312607
+0.565491 0.565491
+0.310333 0.310333
+0.626846 0.626846
+0.937988 0.937988
+0.934921 0.934921
+0.89502 0.89502
+0.871964 0.871964
+0.311127 0.311127
+0.166946 0.166946
+0.521042 0.521042
+0.774902 0.774902
+0.882401 0.882401
+0.986786 0.986786
+0.150024 0.150024
+0.483795 0.483795
+0.321442 0.321442
+0.736664 0.736664
+0.502762 0.502762
+0.171753 0.171753
+0.651321 0.651321
+0.307144 0.307144
+0.116119 0.116119
+0.741577 0.741577
+0.194 0.194
+0.370377 0.370377
+0.474091 0.474091
+0.521011 0.521011
+0.305237 0.305237
+0.473312 0.473312
+0.269012 0.269012
+0.879639 0.879639
+0.769531 0.769531
+0.383301 0.383301
+0.130188 0.130188
+0.602646 0.602646
+0.915039 0.915039
+0.0549011 0.0549011
+0.749207 0.749207
+0.482651 0.482651
+0.972076 0.972076
+0.738892 0.738892
+0.768951 0.768951
+0.974442 0.974442
+0.695526 0.695526
+0.745056 0.745056
+0.623444 0.623444
+0.278259 0.278259
+0.0418243 0.0418243
+0.44873 0.44873
+0.76828 0.76828
+0.787872 0.787872
+0.827469 0.827469
 0.179718 0.179718
-0.654144 0.654144
-0.741287 0.741287
-0.751144 0.751144
-0.839615 0.839615
-0.808151 0.808151
-0.0121307 0.0121307
-0.138382 0.138382
-0.671951 0.671951
-0.0708618 0.0708618
-0.583008 0.583008
-0.294388 0.294388
-0.285034 0.285034
-0.736023 0.736023
-0.152557 0.152557
-0.360489 0.360489
-0.36441 0.36441
-0.957626 0.957626
-0.0749969 0.0749969
-0.47908 0.47908
-0.319366 0.319366
-0.64859 0.64859
-0.738922 0.738922
-0.72406 0.72406
-0.299393 0.299393
-0.314926 0.314926
-0.732941 0.732941
-0.372452 0.372452
-0.678741 0.678741
-0.55098 0.55098
-0.385269 0.385269
-0.734573 0.734573
-0.562195 0.562195
-0.132812 0.132812
-0.384933 0.384933
-0.086731 0.086731
-0.955215 0.955215
-0.136047 0.136047
-0.352386 0.352386
-0.280441 0.280441
-0.984207 0.984207
-0.137878 0.137878
-0.736267 0.736267
-0.517578 0.517578
-0.862 0.862
-0.715012 0.715012
-0.997482 0.997482
-0.911331 0.911331
-0.539246 0.539246
-0.698517 0.698517
-0.967285 0.967285
-0.323242 0.323242
-0.873383 0.873383
-0.143753 0.143753
-0.0576324 0.0576324
-0.171371 0.171371
-0.364319 0.364319
-0.392075 0.392075
-0.639481 0.639481
-0.743164 0.743164
-0.902924 0.902924
-0.0902863 0.0902863
-0.976624 0.976624
-0.481323 0.481323
-0.233276 0.233276
-0.103912 0.103912
-0.380615 0.380615
-0.438705 0.438705
-0.812164 0.812164
-0.24115 0.24115
-0.937317 0.937317
-0.178665 0.178665
-0.892487 0.892487
-0.731339 0.731339
-0.384674 0.384674
-0.956879 0.956879
-0.978622 0.978622
-0.7314 0.7314
-0.651443 0.651443
-0.623932 0.623932
-0.269775 0.269775
-0.511215 0.511215
-0.897629 0.897629
-0.0632477 0.0632477
-0.450867 0.450867
-0.0565491 0.0565491
-0.899155 0.899155
-0.999771 0.999771
-0.376083 0.376083
-0.984329 0.984329
-0.258011 0.258011
-0.751953 0.751953
-0.352905 0.352905
-0.677979 0.677979
-0.174011 0.174011
-0.0476074 0.0476074
-0.298096 0.298096
-0.790314 0.790314
-0.615448 0.615448
-0.613724 0.613724
-0.500443 0.500443
-0.209641 0.209641
-0.671829 0.671829
-0.417862 0.417862
-0.420929 0.420929
-0.141037 0.141037
-0.764679 0.764679
-0.139328 0.139328
-0.539597 0.539597
-0.0205994 0.0205994
-0.702957 0.702957
-0.961243 0.961243
-0.0110626 0.0110626
-0.0985413 0.0985413
-0.396362 0.396362
-0.976059 0.976059
-0.779724 0.779724
-0.746811 0.746811
-0.0462646 0.0462646
-0.765961 0.765961
-0.231079 0.231079
-0.238327 0.238327
-0.781128 0.781128
-0.0765686 0.0765686
-0.21347 0.21347
-0.379639 0.379639
-0.480698 0.480698
-0.916168 0.916168
-0.00801086 0.00801086
+0.62175 0.62175
+0.776367 0.776367
+0.0713348 0.0713348
+0.00642395 0.00642395
+0.687164 0.687164
+0.754257 0.754257
+0.326889 0.326889
+0.968994 0.968994
+0.710129 0.710129
+0.492828 0.492828
+0.677399 0.677399
+0.963821 0.963821
+0.405121 0.405121
+0.640411 0.640411
+0.560074 0.560074
+0.131561 0.131561
+0.820374 0.820374
+0.146255 0.146255
+0.228043 0.228043
+0.991241 0.991241
+0.650299 0.650299
+0.7043 0.7043
+0.337524 0.337524
+0.958359 0.958359
+0.261246 0.261246
+0.256927 0.256927
+0.298599 0.298599
+0.02565 0.02565
+0.781586 0.781586
+0.940063 0.940063
+0.870529 0.870529
+0.922852 0.922852
+0.940948 0.940948
+0.741928 0.741928
+0.65181 0.65181
+0.345871 0.345871
+0.23436 0.23436
+0.754547 0.754547
+0.819473 0.819473
+0.42868 0.42868
+0.772415 0.772415
+0.349274 0.349274
+0.0597382 0.0597382
+0.564255 0.564255
+0.309509 0.309509
+0.600571 0.600571
+0.591736 0.591736
+0.926651 0.926651
+0.347504 0.347504
+0.155624 0.155624
+0.545685 0.545685
+0.0256195 0.0256195
+0.531128 0.531128
+0.291885 0.291885
+0.00901794 0.00901794
+0.382095 0.382095
+0.314194 0.314194
+0.168365 0.168365
+0.125793 0.125793
+0.166199 0.166199
+0.863922 0.863922
+0.519516 0.519516
+0.00614929 0.00614929
+0.466431 0.466431
+0.684891 0.684891
+0.465149 0.465149
+0.62973 0.62973
+0.644852 0.644852
+0.630875 0.630875
+0.162064 0.162064
+0.91301 0.91301
+0.643478 0.643478
+0.273834 0.273834
+0.71524 0.71524
+0.902237 0.902237
+0.815765 0.815765
+0.210983 0.210983
+0.366196 0.366196
+0.0476837 0.0476837
+0.617447 0.617447
+0.40831 0.40831
+0.0718231 0.0718231
+0.503723 0.503723
+0.673523 0.673523
+0.64534 0.64534
+0.447952 0.447952
+0.907288 0.907288
+0.268448 0.268448
+0.630341 0.630341
+0.144485 0.144485
+0.738739 0.738739
+0.266006 0.266006
+0.319687 0.319687
+0.409439 0.409439
+0.895981 0.895981
+0.550079 0.550079
+0.641006 0.641006
+0.728546 0.728546
+0.102997 0.102997
+0.607635 0.607635
+0.265091 0.265091
+0.939758 0.939758
+0.851181 0.851181
+0.263123 0.263123
+0.0870514 0.0870514
+0.549377 0.549377
+0.805817 0.805817
+0.316711 0.316711
+0.549744 0.549744
+0.140884 0.140884
+0.585678 0.585678
+0.560104 0.560104
+0.512222 0.512222
+0.852036 0.852036
+0.561615 0.561615
+0.741608 0.741608
+0.454834 0.454834
+0.0360565 0.0360565
+0.135925 0.135925
+0.336502 0.336502
+0.0100098 0.0100098
+0.759277 0.759277
+0.519577 0.519577
+0.107574 0.107574
+0.310028 0.310028
+0.540283 0.540283
+0.150803 0.150803
+0.61441 0.61441
+0.881866 0.881866
+0.864868 0.864868
+0.520905 0.520905
+0.149094 0.149094
+0.0435181 0.0435181
+0.312943 0.312943
+0.0125122 0.0125122
+0.579742 0.579742
 Party 0 Truncate/Zero Extend 2D Tensor test passed!
 Party 0 Stats --- Sent: 8048 bytes, Received: 5632 bytes
 
@@ -566,53 +450,55 @@ Party 0 Stats --- Sent: 8048 bytes, Received: 5632 bytes
 Party 1 Stats --- Sent: 5632 bytes, Received: 8048 bytes
 
 --- Testing Truncate/Zero Extend 3D Tensor for Party 1/2 ---
-0.162262 0.162262
-0.612747 0.612747
-0.889969 0.889969
-0.881927 0.881927
-0.361023 0.361023
-0.601761 0.601761
-0.47995 0.47995
-0.15863 0.15863
+0.612015 0.612015
+0.612366 0.612366
+0.223633 0.223633
+0.426102 0.426102
+0.129517 0.129517
+0.0773621 0.0773621
+0.886322 0.886322
+0.13858 0.13858
 Party 0 Truncate/Zero Extend 3D Tensor test passed!
 Party 0 Stats --- Sent: 232 bytes, Received: 160 bytes
 
 --- Testing Optimized Element-wise Multiplication for Party 0/2 ---
+finish reading randomness
 Party 1 Stats --- Sent: 160 bytes, Received: 232 bytes
 
 --- Testing Optimized Element-wise Multiplication for Party 1/2 ---
-Party 1 Stats --- Sent: 288 bytes, Received: 464 bytes
-
---- Testing Square Tensor Opt for Party 1/2 ---
+finish reading randomness
 test elementwise mul
-3.43509e+12 3.43509e+12
-2.32732e+13 2.32732e+13
-1.11304e+13 1.11304e+13
-1.62549e+13 1.62549e+13
-5.74452e+13 5.74452e+13
--2.12277e+13 -2.12277e+13
-2.72782e+13 2.72782e+13
--4.91015e+13 -4.91015e+13
-5.6085e+13 5.6085e+13
--1.0754e+13 -1.0754e+13
-1.10852e+13 1.10852e+13
--1.32335e+12 -1.32335e+12
+-2.71106e+13 -2.71106e+13
+1.48268e+13 1.48268e+13
+5.60032e+12 5.60032e+12
+-1.02423e+13 -1.02423e+13
+1.64246e+13 1.64246e+13
+-2.97068e+12 -2.97068e+12
+-2.15367e+12 -2.15367e+12
+-1.81548e+12 -1.81548e+12
+4.74037e+13 4.74037e+13
+3.81505e+13 3.81505e+13
+1.57076e+13 1.57076e+13
+-1.63892e+13 -1.63892e+13
 Party 0 Optimized Element-wise Mul test passed!
-Party 0 Stats --- Sent: 464 bytes, Received: 288 bytes
+Party 0 Stats --- Sent: 472 bytes, Received: 296 bytes
 
 --- Testing Square Tensor Opt for Party 0/2 ---
-5.53903e+12 5.53903e+12
-1.88389e+13 1.88389e+13
-2.83289e+13 2.83289e+13
-2.19191e+13 2.19191e+13
-4.77046e+12 4.77046e+12
-1.28702e+13 1.28702e+13
-2.97431e+13 2.97431e+13
-5.22511e+13 5.22511e+13
-6.189e+13 6.189e+13
-3.5182e+13 3.5182e+13
-2.54778e+13 2.54778e+13
-3.2408e+13 3.2408e+13
+Party 1 Stats --- Sent: 296 bytes, Received: 472 bytes
+
+--- Testing Square Tensor Opt for Party 1/2 ---
+3.86003e+13 3.86003e+13
+2.49114e+13 2.49114e+13
+7.95378e+12 7.95378e+12
+1.91054e+13 1.91054e+13
+6.06966e+13 6.06966e+13
+1.62143e+12 1.62143e+12
+4.75492e+11 4.75492e+11
+3.62719e+12 3.62719e+12
+5.94778e+13 5.94778e+13
+7.22374e+12 7.22374e+12
+2.84722e+13 2.84722e+13
+2.19429e+13 2.19429e+13
 Party 0 Square Tensor Opt test passed!
 Party 0 Stats --- Sent: 288 bytes, Received: 200 bytes
 
@@ -620,159 +506,191 @@ Party 0 Stats --- Sent: 288 bytes, Received: 200 bytes
 Party 1 Stats --- Sent: 200 bytes, Received: 288 bytes
 
 --- Testing Square Tensor Opt 3D for Party 1/2 ---
-X_n_plain(0,0,0).to_float<double>() = 14448.6
-X_square_plain(0,0,0).to_float<double>() = 2.08762e+08
-X_reconstructed(0,0,0).to_float<double>() = 2.08762e+08
+X_n_plain(0,0,0).to_float<double>() = 28595.8
+X_square_plain(0,0,0).to_float<double>() = 8.17719e+08
+X_reconstructed(0,0,0).to_float<double>() = 8.17719e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(0,0,1).to_float<double>() = 3522.17
-X_square_plain(0,0,1).to_float<double>() = 1.24057e+07
-X_reconstructed(0,0,1).to_float<double>() = 1.24057e+07
+X_n_plain(0,0,1).to_float<double>() = 13905
+X_square_plain(0,0,1).to_float<double>() = 1.93349e+08
+X_reconstructed(0,0,1).to_float<double>() = 1.93349e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(0,1,0).to_float<double>() = 21493.6
-X_square_plain(0,1,0).to_float<double>() = 4.61973e+08
-X_reconstructed(0,1,0).to_float<double>() = 4.61973e+08
+X_n_plain(0,1,0).to_float<double>() = -11935.4
+X_square_plain(0,1,0).to_float<double>() = 1.42453e+08
+X_reconstructed(0,1,0).to_float<double>() = 1.42453e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(0,1,1).to_float<double>() = 21646.9
-X_square_plain(0,1,1).to_float<double>() = 4.68588e+08
-X_reconstructed(0,1,1).to_float<double>() = 4.68588e+08
+X_n_plain(0,1,1).to_float<double>() = -15488.3
+X_square_plain(0,1,1).to_float<double>() = 2.39886e+08
+X_reconstructed(0,1,1).to_float<double>() = 2.39886e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(1,0,0).to_float<double>() = 20438.6
-X_square_plain(1,0,0).to_float<double>() = 4.17736e+08
-X_reconstructed(1,0,0).to_float<double>() = 4.17736e+08
+X_n_plain(1,0,0).to_float<double>() = -11623.8
+X_square_plain(1,0,0).to_float<double>() = 1.35112e+08
+X_reconstructed(1,0,0).to_float<double>() = 1.35112e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(1,0,1).to_float<double>() = -27453
-X_square_plain(1,0,1).to_float<double>() = 7.53666e+08
-X_reconstructed(1,0,1).to_float<double>() = 7.53666e+08
+X_n_plain(1,0,1).to_float<double>() = -28843.4
+X_square_plain(1,0,1).to_float<double>() = 8.31944e+08
+X_reconstructed(1,0,1).to_float<double>() = 8.31944e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(1,1,0).to_float<double>() = 26963.3
-X_square_plain(1,1,0).to_float<double>() = 7.27017e+08
-X_reconstructed(1,1,0).to_float<double>() = 7.27017e+08
+X_n_plain(1,1,0).to_float<double>() = 26502.7
+X_square_plain(1,1,0).to_float<double>() = 7.02392e+08
+X_reconstructed(1,1,0).to_float<double>() = 7.02392e+08
 Party 0 Square Tensor Opt 3D test passed!
-X_n_plain(1,1,1).to_float<double>() = -4161.36
-X_square_plain(1,1,1).to_float<double>() = 1.73169e+07
-X_reconstructed(1,1,1).to_float<double>() = 1.73169e+07
+X_n_plain(1,1,1).to_float<double>() = 24399.4
+X_square_plain(1,1,1).to_float<double>() = 5.95331e+08
+X_reconstructed(1,1,1).to_float<double>() = 5.95331e+08
 Party 0 Square Tensor Opt 3D test passed!
 Party 0 Stats --- Sent: 160072 bytes, Received: 112048 bytes
 
---- Testing Square Scalar Opt for Party 0/2 ---
+--- Testing Exp Tensor Opt 3D for Party 0/2 ---
+X_plain(0,0,0).to_float<double>() = 0
+X_plain(0,0,1).to_float<double>() = -0.78125
+X_plain(0,1,0).to_float<double>() = -1
+X_plain(0,1,1).to_float<double>() = -0.75
+X_plain(1,0,0).to_float<double>() = -0.9375
+X_plain(1,0,1).to_float<double>() = -0.8125
+X_plain(1,1,0).to_float<double>() = -0.78125
+X_plain(1,1,1).to_float<double>() = -0.875
 Party 1 Stats --- Sent: 112048 bytes, Received: 160072 bytes
 
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Square Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Square Scalar Opt for Party 0/2 ---
-Party 1 Stats --- Sent: 14 bytes, Received: 20 bytes
-Square Scalar Opt: x_reconstructed.to_float<double>() = 9.85968 9.85969
-
---- Testing Exp Scalar Opt for Party 1/2 ---
-Party 0 Square Scalar Opt test passed!
-Party 0 Stats --- Sent: 20 bytes, Received: 14 bytes
-
---- Testing Exp Scalar Opt for Party 0/2 ---
-init.to_float<double>() = 0.998871
-tmp.to_float<double>() = 0.998871
-tmp.to_float<double>() = 0.997742
-tmp.to_float<double>() = 0.995468
-tmp.to_float<double>() = 0.990936
-tmp.to_float<double>() = 0.981934
-tmp.to_float<double>() = 0.964172
-tmp.to_float<double>() = 0.929611
-tmp.to_float<double>() = 0.864151
-tmp.to_float<double>() = 0.746735
-tmp.to_float<double>() = 0.557602
-Party 1 Stats --- Sent: 140 bytes, Received: 148 bytes
-x_exp_reconstructed.to_float<double>() = 0.310898 0.319311
-
 --- Testing Exp Tensor Opt 3D for Party 1/2 ---
-Party 0 Exp Scalar Opt test passed!
-Party 0 Stats --- Sent: 148 bytes, Received: 140 bytes
-
---- Testing Exp Tensor Opt 3D for Party 0/2 ---
-X_plain(0,0,0).to_float<double>() = -0.25
-X_plain(0,0,1).to_float<double>() = -0.5
-X_plain(0,0,0).to_float<double>() = -0.40625
-X_plain(0,1,0).to_float<double>() = -0.125
-X_plain(0,0,1).to_float<double>() = -0.75
-X_plain(0,1,1).to_float<double>() = -0.03125
-X_plain(0,1,0).to_float<double>() = -0.21875
-X_plain(1,0,0).to_float<double>() = -0.5625
-X_plain(0,1,1).to_float<double>() = -0.9375
-X_plain(1,0,1).to_float<double>() = -0.75
+X_plain(0,0,0).to_float<double>() = -0.375
+X_plain(0,0,1).to_float<double>() = -0.375
+X_plain(0,1,0).to_float<double>() = -0.65625
+X_plain(0,1,1).to_float<double>() = -0.0625
+X_plain(1,0,0).to_float<double>() = -0.3125
+X_plain(1,0,1).to_float<double>() = -0.21875
+X_plain(1,1,0).to_float<double>() = -0.15625
+X_plain(1,1,1).to_float<double>() = -0.1875
+X_plain(0,0,0).to_float<double>() = 0
+X_exp_reconstructed(0,0,0).to_float<double>() = 0.969421
+X_plain(0,0,1).to_float<double>() = -0.78125
+X_exp_reconstructed(0,0,1).to_float<double>() = 0.443466
+X_plain(0,1,0).to_float<double>() = -1
+X_exp_reconstructed(0,1,0).to_float<double>() = 0.357239
+X_plain(0,1,1).to_float<double>() = -0.75
+X_exp_reconstructed(0,1,1).to_float<double>() = 0.457916
 X_plain(1,0,0).to_float<double>() = -0.9375
-X_plain(1,1,0).to_float<double>() = -0.59375
-X_plain(1,0,1).to_float<double>() = -0.375
-X_plain(1,1,1).to_float<double>() = -0.625
-X_plain(1,1,0).to_float<double>() = -0.09375
-X_plain(1,1,1).to_float<double>() = -1
+X_exp_reconstructed(1,0,0).to_float<double>() = 0.378983
+X_plain(1,0,1).to_float<double>() = -0.8125
+X_exp_reconstructed(1,0,1).to_float<double>() = 0.429672
+X_plain(1,1,0).to_float<double>() = -0.78125
+X_exp_reconstructed(1,1,0).to_float<double>() = 0.443527
+X_plain(1,1,1).to_float<double>() = -0.875
+X_exp_reconstructed(1,1,1).to_float<double>() = 0.40506
 Party 0 Exp Tensor Opt 3D test passed!
 Party 0 Stats --- Sent: 1136552 bytes, Received: 1072528 bytes
+
+--- Testing Inv Sqrt Tensor for Party 0/2 ---
 Party 1 Stats --- Sent: 1072528 bytes, Received: 1136552 bytes
+
+--- Testing Inv Sqrt Tensor for Party 1/2 ---
+x:1.09999
+x:1.09999
+x/2 + 0.2 = -0.749985
+x/2 + 0.2 = -0.749985
+exp(-(x/2 + 0.2)) 0.45697
+exp(-(x/2 + 0.2)) 0.45697
+y = exp(-(x/2 + 0.2)) * 2.2 + 0.2 - x/1024 = 1.20427
+after init
+y = exp(-(x/2 + 0.2)) * 2.2 + 0.2 - x/1024 = 1.20427
+after init
+y^2 = 1.45024
+y^2 = 1.45024
+x*y = 1.32466
+x*y = 1.32466
+x*y*y^2 = 1.92107
+x*y*y^2 = 1.92107
+3*y = 3.61281
+3*y = 3.61281
+y^2 = 0.715454
+y^2 = 0.715454
+x*y = 0.93042
+x*y = 0.93042
+x*y*y^2 = 0.665665
+x*y*y^2 = 0.665665
+3*y = 2.53757
+3*y = 2.53757
+y^2 = 0.875977
+y^2 = 0.875977
+x*y = 1.02951
+x*y = 1.02951
+x*y*y^2 = 0.90181
+x*y*y^2 = 0.90181
+3*y = 2.80783
+3*y = 2.80783
+y^2 = 0.908188
+y^2 = 0.908188
+x*y = 1.04828
+x*y = 1.04828
+x*y*y^2 = 0.952011
+x*y*y^2 = 0.952011
+3*y = 2.85901
+3*y = 2.85901
+y^2 = 0.909134
+y^2 = 0.909134
+x*y = 1.04881
+x*y = 1.04881
+x*y*y^2 = 0.953491
+x*y*y^2 = 0.953491
+3*y = 2.86047
+3*y = 2.86047
+y^2 = 0.909103
+y^2 = 0.909103
+x*y = 1.0488
+x*y = 1.0488
+x*y*y^2 = 0.953445
+x*y*y^2 = 0.953445
+3*y = 2.86043
+3*y = 2.86043
+y^2 = 0.909134
+y^2 = 0.909134
+x*y = 1.04883
+x*y = 1.04883
+x*y*y^2 = 0.953506
+x*y*y^2 = 0.953506
+3*y = 2.86047
+3*y = 2.86047
+y^2 = 0.909088
+y^2 = 0.909088
+x*y = 1.0488
+x*y = 1.0488
+x*y*y^2 = 0.95343
+x*y*y^2 = 0.95343
+3*y = 2.86043
+3*y = 2.86043
+y^2 = 0.909119
+y^2 = 0.909119
+x*y = 1.04881
+x*y = 1.04881
+x*y*y^2 = 0.953491
+x*y*y^2 = 0.953491
+3*y = 2.86047
+3*y = 2.86047
+y^2 = 0.909119
+y^2 = 0.909119
+x*y = 1.04881
+x*y = 1.04881
+x*y*y^2 = 0.953476
+x*y*y^2 = 0.953476
+3*y = 2.86047
+3*y = 2.86047
+Party 1 Stats --- Sent: 9340 bytes, Received: 9436 bytes
+X_plain(0, 0, 0).to_float<double>() = 1.09999
+X_inv_sqrt_reconstructed(0, 0, 0).to_float<double>() = 0.953491
+X_plain(0, 0, 1).to_float<double>() = 2.09999
+X_inv_sqrt_reconstructed(0, 0, 1).to_float<double>() = 0.690079
+X_plain(0, 0, 2).to_float<double>() = 3.09999
+X_inv_sqrt_reconstructed(0, 0, 2).to_float<double>() = 0.567993
+X_plain(0, 1, 0).to_float<double>() = 2.09999
+X_inv_sqrt_reconstructed(0, 1, 0).to_float<double>() = 0.690079
+X_plain(0, 1, 1).to_float<double>() = 3.09999
+X_inv_sqrt_reconstructed(0, 1, 1).to_float<double>() = 0.567963
+X_plain(0, 1, 2).to_float<double>() = 4.09999
+X_inv_sqrt_reconstructed(0, 1, 2).to_float<double>() = 0.493881
+X_plain(0, 2, 0).to_float<double>() = 3.09999
+X_inv_sqrt_reconstructed(0, 2, 0).to_float<double>() = 0.567963
+X_plain(0, 2, 1).to_float<double>() = 4.09999
+X_inv_sqrt_reconstructed(0, 2, 1).to_float<double>() = 0.493881
+X_plain(0, 2, 2).to_float<double>() = 5.09999
+X_inv_sqrt_reconstructed(0, 2, 2).to_float<double>() = 0.442825
+Party 0 Inv Sqrt Tensor test passed!
+Party 0 Stats --- Sent: 9436 bytes, Received: 9340 bytes

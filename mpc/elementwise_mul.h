@@ -7,6 +7,57 @@
 #include "utils/random.h"
 #include "utils/config.h"
 
+template <typename T, int n, int m, int f, int k, int Rank, int Options = Eigen::RowMajor>
+struct ElementwiseMulRandomness{
+    FixTensor<T, m, f, k, Rank, Options> r_x_m;
+    FixTensor<T, m, f, k, Rank, Options> r_y_m;
+    FixTensor<T, n, f, k, Rank, Options> r_x_n;
+    FixTensor<T, n, f, k, Rank, Options> r_y_n;
+    FixTensor<T, n, f, k, Rank, Options> r_x_msb;
+    FixTensor<T, n, f, k, Rank, Options> r_y_msb;
+    FixTensor<T, n, f, k, Rank, Options> r_xy;
+    FixTensor<T, n, f, k, Rank, Options> r_x_rymsb;
+    FixTensor<T, n, f, k, Rank, Options> r_xmsb_y;
+};
+
+template <typename T, int n, int m, int f, int k, int Rank, int Options = Eigen::RowMajor>
+ElementwiseMulRandomness<T, n, m, f, k, Rank, Options> read_elementwise_mul_randomness(MPC& mpc, int batch, int row, int col){
+    ElementwiseMulRandomness<T, n, m, f, k, Rank, Options> randomness;
+    assert(Rank == 3 || Rank == 2);
+    if constexpr (Rank == 3){ // Use if constexpr
+        randomness.r_x_m.resize(batch, row, col);
+        randomness.r_y_m.resize(batch, row, col);
+        randomness.r_x_n.resize(batch, row, col);
+        randomness.r_y_n.resize(batch, row, col);
+        randomness.r_x_msb.resize(batch, row, col);
+        randomness.r_y_msb.resize(batch, row, col);
+        randomness.r_xy.resize(batch, row, col);
+        randomness.r_x_rymsb.resize(batch, row, col);
+        randomness.r_xmsb_y.resize(batch, row, col);
+    }
+    else{ // This branch is only compiled if Rank is not 3
+        randomness.r_x_m.resize(row, col);
+        randomness.r_y_m.resize(row, col);
+        randomness.r_x_n.resize(row, col);
+        randomness.r_y_n.resize(row, col);
+        randomness.r_x_msb.resize(row, col);
+        randomness.r_y_msb.resize(row, col);
+        randomness.r_xy.resize(row, col);
+        randomness.r_x_rymsb.resize(row, col);
+        randomness.r_xmsb_y.resize(row, col);
+    }
+    mpc.read_fixtensor_share(randomness.r_x_m);
+    mpc.read_fixtensor_share(randomness.r_y_m);    
+    mpc.read_fixtensor_share(randomness.r_x_n);    
+    mpc.read_fixtensor_share(randomness.r_y_n);    
+    mpc.read_fixtensor_share(randomness.r_x_msb);    
+    mpc.read_fixtensor_share(randomness.r_y_msb);    
+    mpc.read_fixtensor_share(randomness.r_xy);    
+    mpc.read_fixtensor_share(randomness.r_x_rymsb);    
+    mpc.read_fixtensor_share(randomness.r_xmsb_y);    
+    return randomness;
+}
+
 template <typename T, int Rank>
 int get_elementwise_mul_random_size(int batch, int row, int col){
     size_t m_size = 0;
@@ -21,7 +72,7 @@ int get_elementwise_mul_random_size(int batch, int row, int col){
     return 2 * m_size + 7 * n_size;
 }
 
-template <typename T, int n, int m, int f, int k, int Rank, int Options>
+template <typename T, int n, int m, int f, int k, int Rank, int Options = Eigen::RowMajor>
 void generate_elementwise_mul_randomness(
     int batch,
     int row,
@@ -77,19 +128,11 @@ void generate_elementwise_mul_randomness(
 }
 
 // Optimized Element-wise Multiplication Protocol (Elementwise Mul & Extend)
-template <typename T, int m, int f, int k, int n, int Rank, int Options>
+template <typename T, int n, int m, int f, int k, int Rank, int Options = Eigen::RowMajor>
 auto elementwise_mul_opt(
     const FixTensor<T, m, f, k, Rank, Options>& x_m_share,
     const FixTensor<T, m, f, k, Rank, Options>& y_m_share,
-    const FixTensor<T, m, f, k, Rank, Options>& rx_m_share,
-    const FixTensor<T, n, f, k, Rank, Options>& rx_n_share,
-    const FixTensor<T, n, f, k, Rank, Options>& rx_msb_n_share,
-    const FixTensor<T, m, f, k, Rank, Options>& ry_m_share,
-    const FixTensor<T, n, f, k, Rank, Options>& ry_n_share,
-    const FixTensor<T, n, f, k, Rank, Options>& ry_msb_n_share,
-    const FixTensor<T, n, f, k, Rank, Options>& rxy_n_share,
-    const FixTensor<T, n, f, k, Rank, Options>& rx_msby_n_share,
-    const FixTensor<T, n, f, k, Rank, Options>& rxy_msb_n_share,
+    const ElementwiseMulRandomness<T, n, m, f, k, Rank, Options>& randomness,
     bool x_reconstructed = false,
     bool y_reconstructed = false
 ) -> FixTensor<T, n, f, k, Rank, Options>
@@ -99,15 +142,15 @@ auto elementwise_mul_opt(
     auto x_hat = x_m_share;
     auto y_hat = y_m_share;
     if (!x_reconstructed && !y_reconstructed){
-        x_hat = x_m_share + rx_m_share;
-        y_hat = y_m_share + ry_m_share;
+        x_hat = x_m_share + randomness.r_x_m;
+        y_hat = y_m_share + randomness.r_y_m;
         reconstruct_tensor_parallel(x_hat, y_hat);
     }
     else if (x_reconstructed && !y_reconstructed){
-        y_hat = reconstruct_tensor(y_m_share + ry_m_share);
+        y_hat = reconstruct_tensor(y_m_share + randomness.r_y_m);
     }
     else if (!x_reconstructed && y_reconstructed){
-        x_hat = reconstruct_tensor(x_m_share + rx_m_share);
+        x_hat = reconstruct_tensor(x_m_share + randomness.r_x_m);
     }
     
 
@@ -140,13 +183,13 @@ auto elementwise_mul_opt(
     else{
         term1.setConstant(Fix<T,n,f,k>(0));
     }
-    auto term2 = x_hat_prime_n * ry_n_share;
-    auto term3 = x_hat_prime_n * t_y * ry_msb_n_share;
-    auto term4 = rx_n_share * y_hat_prime_n;
-    auto term5 = rxy_n_share;
-    auto term6 = t_y * rxy_msb_n_share;
-    auto term7 = t_x * rx_msb_n_share * y_hat_prime_n;
-    auto term8 = t_x * rx_msby_n_share;
+    auto term2 = x_hat_prime_n * randomness.r_y_n;
+    auto term3 = x_hat_prime_n * t_y * randomness.r_y_msb;
+    auto term4 = randomness.r_x_n * y_hat_prime_n;
+    auto term5 = randomness.r_xy;
+    auto term6 = t_y * randomness.r_x_rymsb;
+    auto term7 = t_x * randomness.r_x_msb * y_hat_prime_n;
+    auto term8 = t_x * randomness.r_xmsb_y;
     // auto term9 = t_x * t_y * rx_msby_msb_n_share;
     
     FixTensor<T, n, f, k, Rank, Options> result = term1 - term2 + term3 - term4 + term5 - term6 + term7 - term8; // + term9;

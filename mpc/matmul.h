@@ -7,6 +7,43 @@
 #include "utils/random.h"
 
 template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
+struct MatmulRandomness{
+    FixTensor<T, bw, f, k, RankU> U;
+    FixTensor<T, bw, f, k, RankV> V;
+    FixTensor<T, bw, f, k, RankZ> Z;
+};
+
+template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
+MatmulRandomness<T, bw, f, k, RankU, RankV, RankZ> read_matmul_randomness(MPC& mpc, int batch, int m, int n, int q){
+    MatmulRandomness<T, bw, f, k, RankU, RankV, RankZ> randomness;
+    assert(RankU == 3 || RankU == 2);
+    assert(RankV == 3 || RankV == 2);
+    assert(RankZ == 3 || RankZ == 2);
+    if constexpr (RankU == 3){
+        randomness.U.resize(batch, m, n);
+    }
+    else{
+        randomness.U.resize(m, n);
+    }
+    if constexpr (RankV == 3){
+        randomness.V.resize(batch, n, q);
+    }
+    else{
+        randomness.V.resize(n, q);
+    }
+    if constexpr (RankZ == 3){
+        randomness.Z.resize(batch, m, q);
+    }
+    else{
+        randomness.Z.resize(m, q);
+    }
+    mpc.read_fixtensor_share(randomness.U);
+    mpc.read_fixtensor_share(randomness.V);
+    mpc.read_fixtensor_share(randomness.Z);
+    return randomness;
+}
+
+template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
 int get_matmul_random_size(int m, int n, int q, int B = -1){
     if (RankU == 3){
         assert(B != -1);
@@ -18,29 +55,26 @@ int get_matmul_random_size(int m, int n, int q, int B = -1){
 }
 
 template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
-void generate_matmul_randomness(Buffer& p0_buf, Buffer& p1_buf, int m, int n, int q, int B = -1){
+void generate_matmul_randomness(Buffer& p0_buf, Buffer& p1_buf, int B, int m, int n, int q){
+    FixTensor<T, bw, f, k, RankU> U;
+    FixTensor<T, bw, f, k, RankV> V;
+    FixTensor<T, bw, f, k, RankZ> Z;
     if constexpr (RankU == 3) {
         assert(B != -1);
-        FixTensor<T, bw, f, k, RankU> U(B, m, n);
-        FixTensor<T, bw, f, k, RankV> V(n, q);
-        FixTensor<T, bw, f, k, RankZ> Z(B, m, q);
-        U.setRandom();
-        V.setRandom();
-        Z = tensor_mul(U, V);
-        secret_share_and_write_tensor(U, p0_buf, p1_buf);
-        secret_share_and_write_tensor(V, p0_buf, p1_buf);
-        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
+        U.resize(B, m, n);
+        V.resize(n, q);
+        Z.resize(B, m, q);
     } else {
-        FixTensor<T, bw, f, k, RankU> U(m, n);
-        FixTensor<T, bw, f, k, RankV> V(n, q);
-        FixTensor<T, bw, f, k, RankZ> Z(m, q);
-        U.setRandom();
-        V.setRandom();
-        Z = tensor_mul(U, V);
-        secret_share_and_write_tensor(U, p0_buf, p1_buf);
-        secret_share_and_write_tensor(V, p0_buf, p1_buf);
-        secret_share_and_write_tensor(Z, p0_buf, p1_buf);
+        U.resize(m, n);
+        V.resize(n, q);
+        Z.resize(m, q);
     }
+    U.setRandom();
+    V.setRandom();
+    Z = tensor_mul(U, V);
+    secret_share_and_write_tensor(U, p0_buf, p1_buf);
+    secret_share_and_write_tensor(V, p0_buf, p1_buf);
+    secret_share_and_write_tensor(Z, p0_buf, p1_buf);
 }
 
 // Overload: secure_matmul with provided tensor Beaver triple shares (U,V,Z)
@@ -52,9 +86,7 @@ template<
 auto secure_matmul(
     const FixTensorT<T, bw, f, k, RankX, Eigen::RowMajor>& x_share,
     const FixTensorT<T, bw, f, k, RankY, Eigen::RowMajor>& y_share,
-    const FixTensorT<T, bw, f, k, RankX, Eigen::RowMajor>& u_share,
-    const FixTensorT<T, bw, f, k, RankY, Eigen::RowMajor>& v_share,
-    const FixTensorT<T, bw, f, k, (RankX - 1 + RankY - 1), Eigen::RowMajor>& z_share,
+    const MatmulRandomness<T, bw, f, k, RankX, RankY, RankX>& randomness,
     const FixTensorT<T, bw, f, k, RankX, Eigen::RowMajor>* e_ptr = nullptr,
     const FixTensorT<T, bw, f, k, RankY, Eigen::RowMajor>* f_rec_ptr = nullptr
 ) -> FixTensorT<T, bw, f, k, RankX - 1 + RankY - 1, Eigen::RowMajor>
@@ -73,25 +105,27 @@ auto secure_matmul(
     FixTensorY f_rec_val;
 
     if (e_ptr == nullptr && f_rec_ptr == nullptr) {
-        e = x_share - u_share;
-        f_rec_val = y_share - v_share;
+        e = x_share - randomness.U;
+        f_rec_val = y_share - randomness.V;
         reconstruct_tensor_parallel(e, f_rec_val);
     }
-
     else if (e_ptr == nullptr && f_rec_ptr != nullptr) {
-        e = x_share - u_share;
-        f_rec_val = reconstruct_tensor(*f_rec_ptr + v_share);
+        e = x_share - randomness.U;
+        f_rec_val = reconstruct_tensor(*f_rec_ptr - randomness.V);
     }
-
     else if (e_ptr != nullptr && f_rec_ptr == nullptr) {
-        e = reconstruct_tensor(*e_ptr + u_share);
-        f_rec_val = y_share - v_share;
+        e = reconstruct_tensor(*e_ptr - randomness.U);
+        f_rec_val = y_share - randomness.V;
+    }
+    else{
+        e = *e_ptr;
+        f_rec_val = *f_rec_ptr;
     }
     
 
     FixTensorZ term1 = tensor_mul(e, y_share);
     FixTensorZ term2 = tensor_mul(x_share, f_rec_val);
-    FixTensorZ output_share = term1 + term2 + z_share;
+    FixTensorZ output_share = term1 + term2 + randomness.Z;
     if (party == 1) {
         FixTensorZ ef_prod = tensor_mul(e, f_rec_val);
         output_share = output_share - ef_prod;
@@ -108,9 +142,7 @@ template<
 auto secure_matmul(
     const FixTensorT<T, bw, f, k, 3, Eigen::RowMajor>& x_share,
     const FixTensorT<T, bw, f, k, 2, Eigen::RowMajor>& y_share,
-    const FixTensorT<T, bw, f, k, 3, Eigen::RowMajor>& u_share,
-    const FixTensorT<T, bw, f, k, 2, Eigen::RowMajor>& v_share,
-    const FixTensorT<T, bw, f, k, 3, Eigen::RowMajor>& z_share,
+    const MatmulRandomness<T, bw, f, k, 3, 2, 3>& randomness,
     const FixTensorT<T, bw, f, k, 3, Eigen::RowMajor>* e_ptr = nullptr,
     const FixTensorT<T, bw, f, k, 2, Eigen::RowMajor>* f_rec_ptr = nullptr
 ) -> FixTensorT<T, bw, f, k, 3, Eigen::RowMajor>
@@ -125,24 +157,30 @@ auto secure_matmul(
     using FixTensorZ = FixTensorT<T, bw, f, k, 3, Eigen::RowMajor>;
 
     FixTensorX e_val;
-    if (e_ptr == nullptr) {
-        FixTensorX e_share = x_share - u_share;
-        e_val = reconstruct_tensor(e_share);
-    }
-    const FixTensorX& e = (e_ptr == nullptr) ? e_val : *e_ptr;
-
+    FixTensorX e;
     FixTensorY f_rec_val;
-    if (f_rec_ptr == nullptr){
-        FixTensorY f_share = y_share - v_share;
-        f_rec_val = reconstruct_tensor(f_share);
+    if (e_ptr == nullptr && f_rec_ptr == nullptr) {
+        e = x_share - randomness.U;
+        f_rec_val = y_share - randomness.V;
+        reconstruct_tensor_parallel(e, f_rec_val);
     }
-    const FixTensorY& f_rec = (f_rec_ptr == nullptr) ? f_rec_val : *f_rec_ptr;
-
+    else if (e_ptr == nullptr && f_rec_ptr != nullptr) {
+        e = x_share - randomness.U;
+        f_rec_val = reconstruct_tensor(*f_rec_ptr - randomness.V);
+    }
+    else if (e_ptr != nullptr && f_rec_ptr == nullptr) {
+        e = reconstruct_tensor(*e_ptr - randomness.U);
+        f_rec_val = y_share - randomness.V;
+    }
+    else{
+        e = *e_ptr;
+        f_rec_val = *f_rec_ptr;
+    }
     FixTensorZ term1 = tensor_mul(e, y_share);
-    FixTensorZ term2 = tensor_mul(x_share, f_rec);
-    FixTensorZ output_share = term1 + term2 + z_share;
+    FixTensorZ term2 = tensor_mul(x_share, f_rec_val);
+    FixTensorZ output_share = term1 + term2 + randomness.Z;
     if (party == 1) {
-        FixTensorZ ef_prod = tensor_mul(e, f_rec);
+        FixTensorZ ef_prod = tensor_mul(e, f_rec_val);
         output_share = output_share - ef_prod;
     }
     return output_share;
