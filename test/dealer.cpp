@@ -43,7 +43,7 @@ int main() {
     total_size += get_zero_extend_random_size<T, 3>(2, 2, 2);
     std::cout << "total_size: " << total_size << std::endl;
     // For test_elementwise_mul_opt
-    total_size += get_elementwise_mul_random_size<T, BW, M_BITS, F, K, 2, Eigen::RowMajor>(0, 3, 4);
+    total_size += get_elementwise_mul_random_size<T, 2>(0, 3, 4);
     std::cout << "total_size: " << total_size << std::endl;
     // For test_square_tensor_opt
     total_size += get_square_random_size<T, 2>(0, 3, 4);
@@ -59,6 +59,9 @@ int main() {
     // For test_exp_tensor_opt_3d
     total_size += get_exp_random_size<T, 3>(20, 20, 20);
     std::cout << "Total size per party: " << total_size << " bytes." << std::endl;
+    // For test_inv_sqrt_tensor
+    total_size += get_inv_sqrt_random_size<T, BW, M_BITS, F, K, 3>(1, 32, 32);
+    std::cout << "total_size: " << total_size << std::endl;
 
     // 2. Allocate raw uint8_t* buffers
     uint8_t* p0_data = new uint8_t[total_size];
@@ -160,6 +163,11 @@ int main() {
     // For test_exp_tensor_opt_3d
     {
         generate_exp_randomness<T, BW, M_BITS, F, K, 3>(20, 20, 20, p0_buf, p1_buf);
+    }
+
+    // For test_inverse_sqrt_3d
+    {
+        generate_inv_sqrt_randomness<T, BW, M_BITS, F, K, 3>(1, 32, 32, p0_buf, p1_buf);
     }
 
     // 4. Assert that we wrote the exact calculated size

@@ -673,6 +673,24 @@ void test_exp_tensor_opt_3d(MPC& mpc) {
     mpc.print_stats();
 }
 
+void test_inv_sqrt_tensor(MPC& mpc) {
+    std::cout << "\n--- Testing Inv Sqrt Tensor for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    mpc.reset_stats();
+    if (mpc.M != 2) return;
+
+    constexpr int M_BITS = BW - F;
+    using FixTensorM = FixTensor<uint64_t, M_BITS, F, K, 3>;
+    using FixTensorBW = FixTensor<uint64_t, BW, F, K, 3>;
+
+    FixBW X_plain(1, 32, 32);
+    For (int i = 0; i < 32; i++){
+        for (int j = 0; j < 32; j++){
+            X_plain(0, i, j) = Fix<uint64_t, BW, F, K>(double(i + j));
+        }
+    }
+    X_n_share = secret_share_tensor(X_plain);
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " <party_id>" << std::endl;

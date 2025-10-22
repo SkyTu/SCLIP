@@ -7,7 +7,7 @@
 #include "utils/random.h"
 #include "utils/config.h"
 
-template <typename T, int m, int f, int k, int n, int Rank, int Options>
+template <typename T, int Rank>
 int get_elementwise_mul_random_size(int batch, int row, int col){
     size_t m_size = 0;
     size_t n_size = 0;
@@ -33,8 +33,8 @@ void generate_elementwise_mul_randomness(
         FixTensor<T, m, f, k, Rank, Options> r_x_m(batch, row, col), r_y_m(batch, row, col);
         FixTensor<T, n, f, k, Rank, Options> r_x_n(batch, row, col), r_y_n(batch, row, col), r_x_msb(batch, row, col), r_y_msb(batch, row, col);
         FixTensor<T, n, f, k, Rank, Options> r_xy(batch, row, col), r_x_rymsb(batch, row, col), r_xmsb_y(batch, row, col);
-        r_x_m.setRadnom();
-        r_y_m.setRadnom();
+        r_x_m.setRandom();
+        r_y_m.setRandom();
         r_x_n = extend_locally<n,f,k>(r_x_m);
         r_y_n = extend_locally<n,f,k>(r_y_m);
         r_x_msb = get_msb<n,f,k>(r_x_n);
