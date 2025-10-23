@@ -84,7 +84,7 @@ void generate_square_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
 
 
 template <typename T, int n, int m, int f, int k,  int Rank>
-void generate_square_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
+void generate_square_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
     if constexpr(Rank == 3){
         FixTensor<T, m, f, k, Rank> R(batch, row, col);
         FixTensor<T, n, f, k, Rank> R_N(batch, row, col);

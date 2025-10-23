@@ -60,7 +60,7 @@ void generate_zero_extend_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
 }
 
 template <typename T, int BW, int smallBW, int F, int K, int Rank>
-void generate_zero_extend_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
+void generate_zero_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
     FixTensor<T, smallBW, F, K, Rank> r_m;
     FixTensor<T, BW, F, K, Rank> r_e;
     FixTensor<T, BW, F, K, Rank> r_msb;

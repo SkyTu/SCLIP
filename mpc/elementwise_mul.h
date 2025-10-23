@@ -74,11 +74,11 @@ int get_elementwise_mul_random_size(int batch, int row, int col){
 
 template <typename T, int n, int m, int f, int k, int Rank, int Options = Eigen::RowMajor>
 void generate_elementwise_mul_randomness(
+    Buffer& p0_buf,
+    Buffer& p1_buf,
     int batch,
     int row,
-    int col,
-    Buffer& p0_buf,
-    Buffer& p1_buf
+    int col
 ){
     if constexpr (Rank == 3) {
         FixTensor<T, m, f, k, Rank, Options> r_x_m(batch, row, col), r_y_m(batch, row, col);

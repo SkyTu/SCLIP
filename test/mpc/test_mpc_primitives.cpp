@@ -650,13 +650,44 @@ void test_inv_sqrt_tensor(MPC& mpc) {
         for(int i = 0; i < 3; i++){
             for(int j = 0; j < 3; j++){
                 std::cout << "X_plain(0, " << i << ", " << j << ").to_float<double>() = " << X_plain(0, i, j).to_float<double>() << std::endl;
+                std::cout << "Ground truth: " << 1.0 / std::sqrt(X_plain(0, i, j).to_float<double>()) << std::endl;
                 std::cout << "X_inv_sqrt_reconstructed(0, " << i << ", " << j << ").to_float<double>() = " << X_inv_sqrt_reconstructed(0, i, j).to_float<double>() << std::endl;
             }
         }
-        std::cout << "Party " << mpc.party << " Inv Sqrt Tensor test passed!" << std::endl;
     }
     mpc.print_stats();
 }
+
+void test_reciprocal_tensor(MPC& mpc) {
+    std::cout << "\n--- Testing Reciprocal Tensor for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    mpc.reset_stats();
+    if (mpc.M != 2) return;
+
+    constexpr int M_BITS = BW - F;
+    using FixTensorM = FixTensor<uint64_t, M_BITS, F, K, 3>;
+    using FixTensorBW = FixTensor<uint64_t, BW, F, K, 3>;
+
+    FixTensorBW X_plain(1, 3, 3);
+    X_plain.setValues({{{1.5, 2.2, 3.3}, {4.4, 5.5, 6.6}, {7.7, 8.8, 9.9}}});
+    FixTensorBW X_n_share = secret_share_tensor(X_plain);
+    
+    ReciprocalRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;
+    randomness = read_reciprocal_randomness<uint64_t, BW, M_BITS, F, K, 3>(mpc, 1, 3, 3);
+    auto X_reciprocal_share = reciprocal_tensor<uint64_t, BW, M_BITS, F, K, 3>(X_n_share, randomness);
+    auto X_reciprocal_reconstructed = reconstruct_tensor(X_reciprocal_share);
+    if (mpc.party == 0) {
+        for(int i = 0; i < 3; i++){
+            for(int j = 0; j < 3; j++){
+                std::cout << "X_plain(0, " << i << ", " << j << ").to_float<double>() = " << X_plain(0, i, j).to_float<double>() << std::endl;
+                std::cout << "X_reciprocal_reconstructed(0, " << i << ", " << j << ").to_float<double>() = " << X_reciprocal_reconstructed(0, i, j).to_float<double>() << std::endl;
+                std::cout << "Ground truth: " << 1.0 / X_plain(0, i, j).to_float<double>() << std::endl;
+            }
+        }
+    }
+    mpc.print_stats();
+    return;
+}
+
 
 int main(int argc, char** argv) {
     if (argc < 2) {
@@ -694,6 +725,7 @@ int main(int argc, char** argv) {
         // test_exp_scalar_opt(mpc);
         test_exp_tensor_opt_3d(mpc);
         test_inv_sqrt_tensor(mpc);
+        test_reciprocal_tensor(mpc);
         mpc.close();
 
     } catch (const std::exception& e) {

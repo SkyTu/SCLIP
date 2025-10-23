@@ -63,6 +63,8 @@ int main() {
     total_size += get_inv_sqrt_random_size<T, BW, M_BITS, F, K, 3>(1, 3, 3);
     std::cout << "total_size: " << total_size << std::endl;
 
+    total_size += get_reciprocal_random_size<T, 3>(1, 3, 3);
+    std::cout << "total_size: " << total_size << std::endl;
     // 2. Allocate raw uint8_t* buffers
     uint8_t* p0_data = new uint8_t[total_size];
     uint8_t* p1_data = new uint8_t[total_size];
@@ -107,7 +109,7 @@ int main() {
     std::cout << "p0_offset: " << p0_offset << ", p1_offset: " << p1_offset << ", total_size: " << total_size << std::endl;
     // For test_truncate_zero_extend_tensor_2d
     {
-        generate_zero_extend_randomness<T, BW, M_BITS, F, K, 2>(20, 20, 20, p0_buf, p1_buf);
+        generate_zero_extend_randomness<T, BW, M_BITS, F, K, 2>(p0_buf, p1_buf, 20, 20, 20);
     }
 
     p0_offset = p0_buf.ptr - p0_data;
@@ -115,7 +117,7 @@ int main() {
     std::cout << "p0_offset: " << p0_offset << ", p1_offset: " << p1_offset << ", total_size: " << total_size << std::endl;
     // For test_truncate_zero_extend_tensor_3d
     {
-        generate_zero_extend_randomness<T, BW, M_BITS, F, K, 3>(2, 2, 2, p0_buf, p1_buf);
+        generate_zero_extend_randomness<T, BW, M_BITS, F, K, 3>(p0_buf, p1_buf, 2, 2, 2);
     }
 
     p0_offset = p0_buf.ptr - p0_data;
@@ -123,7 +125,7 @@ int main() {
     std::cout << "p0_offset: " << p0_offset << ", p1_offset: " << p1_offset << ", total_size: " << total_size << std::endl;
     // For test_elementwise_mul_opt
     {
-        generate_elementwise_mul_randomness<T, BW, M_BITS, F, K, 2, Eigen::RowMajor>(0, 3, 4, p0_buf, p1_buf);
+        generate_elementwise_mul_randomness<T, BW, M_BITS, F, K, 2, Eigen::RowMajor>(p0_buf, p1_buf, 0, 3, 4);
     }
 
     p0_offset = p0_buf.ptr - p0_data;
@@ -131,7 +133,7 @@ int main() {
     std::cout << "p0_offset: " << p0_offset << ", p1_offset: " << p1_offset << ", total_size: " << total_size << std::endl;
     // For test_square_tensor_opt
     {
-        generate_square_randomness<T, BW, M_BITS, F, K, 2>(0, 3, 4, p0_buf, p1_buf);
+        generate_square_randomness<T, BW, M_BITS, F, K, 2>(p0_buf, p1_buf, 0, 3, 4);
     }
 
     p0_offset = p0_buf.ptr - p0_data;
@@ -139,7 +141,7 @@ int main() {
     std::cout << "p0_offset: " << p0_offset << ", p1_offset: " << p1_offset << ", total_size: " << total_size << std::endl;
     // For test_square_tensor_opt_3d
     {
-        generate_square_randomness<T, BW, M_BITS, F, K, 3>(20, 20, 20, p0_buf, p1_buf);
+        generate_square_randomness<T, BW, M_BITS, F, K, 3>(p0_buf, p1_buf, 20, 20, 20);
     }
 
     // p0_offset = p0_buf.ptr - p0_data;
@@ -162,12 +164,17 @@ int main() {
 
     // For test_exp_tensor_opt_3d
     {
-        generate_exp_randomness<T, BW, M_BITS, F, K, 3>(20, 20, 20, p0_buf, p1_buf);
+        generate_exp_randomness<T, BW, M_BITS, F, K, 3>(p0_buf, p1_buf, 20, 20, 20);
     }
 
     // For test_inverse_sqrt_3d
     {
-        generate_inv_sqrt_randomness<T, BW, M_BITS, F, K, 3>(1, 3, 3, p0_buf, p1_buf);
+        generate_inv_sqrt_randomness<T, BW, M_BITS, F, K, 3>(p0_buf, p1_buf, 1, 3, 3);
+    }
+
+    // For test_reciprocal_tensor
+    {
+        generate_reciprocal_randomness<T, BW, M_BITS, F, K, 3>(p0_buf, p1_buf, 1, 3, 3);
     }
 
     // 4. Assert that we wrote the exact calculated size

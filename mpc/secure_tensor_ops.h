@@ -79,12 +79,12 @@ size_t get_exp_random_size(int batch, int row, int col){
 }
 
 template <typename T, int n, int m, int f, int k, int Rank>
-void generate_exp_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
+void generate_exp_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
     int iters = RECIPROCAL_NR_ITERS;
     for(int i = 0; i < iters; ++i){
-        generate_square_randomness<T, n, m, f, k, Rank>(batch, row, col, p0_buf, p1_buf);
+        generate_square_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
     }
-    generate_zero_extend_randomness<T, n, m, f, k, Rank>(batch, row, col, p0_buf, p1_buf);
+    generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
     return;
 }
 
@@ -177,83 +177,78 @@ InvSqrtRandomness<T, n, m, f, k, Rank> read_inv_sqrt_randomness(MPC& mpc, int ba
 
 // by default, the inv_sqrt input will be 3D
 template <typename T, int n, int m, int f, int k, int Rank>
-void generate_inv_sqrt_randomness(int batch, int row, int col, Buffer& p0_buf, Buffer& p1_buf){
+void generate_inv_sqrt_randomness(Buffer& p0_buf, Buffer& p1_buf,int batch, int row, int col){
     int iters = INV_SQRT_NR_ITERS;
-    generate_zero_extend_randomness<T, n, m, f, k, Rank>(batch, row, col, p0_buf, p1_buf);
-    generate_exp_randomness<T, n, m, f, k, Rank>(batch, row, col, p0_buf, p1_buf);
+    generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+    generate_exp_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
     for(int i = 0; i < iters; ++i){
+        FixTensor<T, m, f, k, Rank> R;
+        FixTensor<T, n, f, k, Rank> R_N;
+        FixTensor<T, n, f, k, Rank> R_SQUARE;
+        FixTensor<T, n, f, k, Rank> R_MSB;
+        FixTensor<T, n, f, k, Rank> R_R_MSB;
+        FixTensor<T, m, f, k, Rank, Eigen::RowMajor> r_x_m, r_y_m;
+        FixTensor<T, n, f, k, Rank, Eigen::RowMajor> r_x_n, r_y_n, r_x_msb, r_y_msb;
+        FixTensor<T, n, f, k, Rank, Eigen::RowMajor> r_xy, r_x_rymsb, r_xmsb_y;
         if constexpr(Rank == 3){
-            FixTensor<T, m, f, k, Rank> R(batch, row, col);
-            FixTensor<T, n, f, k, Rank> R_N(batch, row, col);
-            FixTensor<T, n, f, k, Rank> R_SQUARE(batch, row, col);
-            FixTensor<T, n, f, k, Rank> R_MSB(batch, row, col);
-            FixTensor<T, n, f, k, Rank> R_R_MSB(batch, row, col);
-            R.setRandom();
-            R_N = extend_locally<n, f, k>(R);
-            R_SQUARE = R_N * R_N;
-            R_MSB = get_msb<n, f, k>(R_N);
-            R_R_MSB = R_N * R_MSB;
-            secret_share_and_write_tensor(R, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_N, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
-
-            FixTensor<T, m, f, k, Rank, Eigen::RowMajor> r_x_m(batch, row, col), r_y_m(batch, row, col);
-            FixTensor<T, n, f, k, Rank, Eigen::RowMajor> r_x_n(batch, row, col), r_y_n(batch, row, col), r_x_msb(batch, row, col), r_y_msb(batch, row, col);
-            FixTensor<T, n, f, k, Rank, Eigen::RowMajor> r_xy(batch, row, col), r_x_rymsb(batch, row, col), r_xmsb_y(batch, row, col);
-            r_x_m.setRandom();
-            r_y_m = R;
-            r_x_n = extend_locally<n,f,k>(r_x_m);
-            r_y_n = R_N;
-            r_x_msb = get_msb<n,f,k>(r_x_n);
-            r_y_msb = R_MSB;
-            r_xy = r_x_n * r_y_n;
-            r_x_rymsb = r_x_n * r_y_msb;
-            r_xmsb_y = r_x_msb * r_y_n;
-            secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
-        } else {
-            FixTensor<T, m, f, k, Rank> R(row, col);
-            FixTensor<T, n, f, k, Rank> R_N(row, col);
-            FixTensor<T, n, f, k, Rank> R_SQUARE(row, col);
-            FixTensor<T, n, f, k, Rank> R_MSB(row, col);
-            FixTensor<T, n, f, k, Rank> R_R_MSB(row, col);
-            R.setRandom();
-            R_N = extend_locally<n, f, k>(R);
-            R_SQUARE = R_N * R_N;
-            R_MSB = get_msb<n, f, k>(R_N);
-            R_R_MSB = R_N * R_MSB;
-            secret_share_and_write_tensor(R, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_N, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
-            secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
-            FixTensor<T, m, f, k, Rank, Eigen::RowMajor> r_x_m(row, col), r_y_m(row, col);
-            FixTensor<T, n, f, k, Rank, Eigen::RowMajor> r_x_n(row, col), r_y_n(row, col), r_x_msb(row, col), r_y_msb(row, col);
-            FixTensor<T, n, f, k, Rank, Eigen::RowMajor> r_xy(row, col), r_x_rymsb(row, col), r_xmsb_y(row, col);
-            r_x_m.setRandom();
-            r_y_m = R;
-            r_x_n = extend_locally<n,f,k>(r_x_m);
-            r_y_n = R_N;
-            r_x_msb = get_msb<n,f,k>(r_x_n);
-            r_y_msb = R_MSB;
-            r_xy = r_x_n * r_y_n;
-            r_x_rymsb = r_x_n * r_y_msb;
-            r_xmsb_y = r_x_msb * r_y_n;
-            secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
-            secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
+            R.resize(batch, row, col);
+            R_N.resize(batch, row, col);
+            R_SQUARE.resize(batch, row, col);
+            R_MSB.resize(batch, row, col);
+            R_R_MSB.resize(batch, row, col);
+            r_x_m.resize(batch, row, col);
+            r_y_m.resize(batch, row, col);
+            r_x_n.resize(batch, row, col);
+            r_y_n.resize(batch, row, col);
+            r_x_msb.resize(batch, row, col);
+            r_y_msb.resize(batch, row, col);
+            r_xy.resize(batch, row, col);
+            r_x_rymsb.resize(batch, row, col);
+            r_xmsb_y.resize(batch, row, col);
         }
-        generate_elementwise_mul_randomness<T, n, m, f, k, Rank, Eigen::RowMajor>(batch, row, col, p0_buf, p1_buf);
-        generate_zero_extend_randomness<T, n, m, f, k, Rank>(batch, row, col, p0_buf, p1_buf);
+        else{
+            R.resize(row, col);
+            R_N.resize(row, col);
+            R_SQUARE.resize(row, col);
+            R_MSB.resize(row, col);
+            R_R_MSB.resize(row, col);
+            r_x_m.resize(row, col);
+            r_y_m.resize(row, col);
+            r_x_n.resize(row, col);
+            r_y_n.resize(row, col);
+            r_x_msb.resize(row, col);
+            r_y_msb.resize(row, col);
+            r_xy.resize(row, col);
+            r_x_rymsb.resize(row, col);
+            r_xmsb_y.resize(row, col);
+        }
+        R.setRandom();
+        R_N = extend_locally<n, f, k>(R);
+        R_SQUARE = R_N * R_N;
+        R_MSB = get_msb<n, f, k>(R_N);
+        R_R_MSB = R_N * R_MSB;
+        secret_share_and_write_tensor(R, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_N, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
+        r_x_m.setRandom();
+        r_y_m = R;
+        r_x_n = extend_locally<n,f,k>(r_x_m);
+        r_y_n = R_N;
+        r_x_msb = get_msb<n,f,k>(r_x_n);
+        r_y_msb = R_MSB;
+        r_xy = r_x_n * r_y_n;
+        r_x_rymsb = r_x_n * r_y_msb;
+        r_xmsb_y = r_x_msb * r_y_n;
+        secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
+        generate_elementwise_mul_randomness<T, n, m, f, k, Rank, Eigen::RowMajor>(p0_buf, p1_buf, batch, row, col);
+        generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
     }
 }
 
@@ -265,8 +260,6 @@ FixTensor<T, m, f, k, Rank> inv_sqrt_tensor(FixTensor<T, n, f, k, Rank> x_n_shar
     FixTensor<T, n, f, k, Rank> init_n_share(x_n_share.dimensions());
     FixTensor<T, m, f, k, Rank> init_m_share(x_n_share.dimensions());
     // init = (e^{- (x/2 + 0.2)} * 2.2 + 0.2) - x / 1024
-    auto tmp = reconstruct_tensor(x_n_share)(0,0,0);
-    std::cout << "x:" << tmp.template to_float<double>() << std::endl;
     constant_n_tmp.setConstant(0.5);
     init_n_share = x_n_share * constant_n_tmp;
     init_m_share = truncate_reduce_tensor(init_n_share);
@@ -282,11 +275,7 @@ FixTensor<T, m, f, k, Rank> inv_sqrt_tensor(FixTensor<T, n, f, k, Rank> x_n_shar
         init_n_share = constant_n_tmp - init_n_share;
     }
     
-    tmp = reconstruct_tensor(init_n_share)(0,0,0);
-    std::cout << "x/2 + 0.2 = " << tmp.template to_float<double>() << std::endl;
     init_n_share = exp_tensor<T, n, m, f, k, Rank>(init_n_share, randomness.exp_randomness);
-    tmp = reconstruct_tensor(init_n_share)(0,0,0);
-    std::cout << "exp(-(x/2 + 0.2)) " << tmp.template to_float<double>() << std::endl;
     // init_n_share = exp_tensor<T, n, m, f, k, Rank>(init_n_share, randomness.exp_randomness);
     
     constant_n_tmp.setConstant(2.2);
@@ -299,14 +288,11 @@ FixTensor<T, m, f, k, Rank> inv_sqrt_tensor(FixTensor<T, n, f, k, Rank> x_n_shar
     }    
     constant_n_tmp.setConstant(1.0 / 1024.0);
     init_m_share = init_m_share - truncate_reduce_tensor(constant_n_tmp * x_n_share);
-    auto tmp_m = reconstruct_tensor(init_m_share)(0,0,0);
-    std::cout << "y = exp(-(x/2 + 0.2)) * 2.2 + 0.2 - x/1024 = " << tmp_m.template to_float<double>() << std::endl;
-
+    
     FixTensor<T, m, f, k, Rank> x_m_share = change_bitwidth<m, f, k, T, n, f, k, Rank>(x_n_share);
     FixTensor<T, n, f, k, Rank> x_mul_init_n_share;
     FixTensor<T, m, f, k, Rank> x_mul_init_m_share;
     FixTensor<T, n, f, k, Rank> term1;
-    std::cout << "after init" << std::endl;
     for(int i = 0; i < iters; i++){
         auto init_m_share_rec = init_m_share + randomness.square_randomness[i].R;
         auto x_m_share_rec = x_m_share + randomness.elementwise_mul_randomness_opt[i].r_x_m;
@@ -315,25 +301,17 @@ FixTensor<T, m, f, k, Rank> inv_sqrt_tensor(FixTensor<T, n, f, k, Rank> x_n_shar
         // y ** 2
         auto sq = square_tensor_opt<T, n, m, f, k, Rank>(init_m_share_rec, randomness.square_randomness[i], true);
         auto sq_m_share = truncate_reduce_tensor(sq);
-        tmp_m = reconstruct_tensor(sq_m_share)(0,0,0);
-        std::cout << "y^2 = " << tmp_m.template to_float<double>() << std::endl;
-
+        
         // x * y
         x_mul_init_n_share = elementwise_mul_opt<T, n, m, f, k, Rank>(x_m_share_rec, init_m_share_rec, randomness.elementwise_mul_randomness_opt[i], true, true);
         x_mul_init_m_share = truncate_reduce_tensor(x_mul_init_n_share);
-        tmp_m = reconstruct_tensor(x_mul_init_m_share)(0,0,0);
-        std::cout << "x*y = " << tmp_m.template to_float<double>() << std::endl;
-
+        
 
         // x * y * y ** 2
         term1 = elementwise_mul_opt<T, n, m, f, k, Rank>(x_mul_init_m_share, sq_m_share, randomness.elementwise_mul_randomness[i], false, false);
         auto tmp = truncate_reduce_tensor(term1);
-        tmp_m = reconstruct_tensor(tmp)(0,0,0);
-        std::cout << "x*y*y^2 = " << tmp_m.template to_float<double>() << std::endl;
         constant_m_tmp.setConstant(Fix<T, m, f, k>(3));
         auto term2 = constant_m_tmp * init_m_share;
-        tmp_m = reconstruct_tensor(term2)(0,0,0);
-        std::cout << "3*y = " << tmp_m.template to_float<double>() << std::endl;
         init_m_share = term2 - tmp;
         
         init_n_share = zero_extend_tensor<T, n, m, f, k, Rank>(init_m_share, randomness.zero_extend_randomness[i+1]);
@@ -341,4 +319,73 @@ FixTensor<T, m, f, k, Rank> inv_sqrt_tensor(FixTensor<T, n, f, k, Rank> x_n_shar
         init_m_share = truncate_reduce_tensor(constant_n_tmp * init_n_share);
     }
     return init_m_share;
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+struct ReciprocalRandomness{
+    ExpRandomness<T, n, m, f, k, Rank> exp_randomness;
+    SquareRandomness<T, n, m, f, k, Rank> square_randomness[RECIPROCAL_NR_ITERS];
+    ElementwiseMulRandomness<T, n, m, f, k, Rank> elementwise_mul_randomness[RECIPROCAL_NR_ITERS];
+    ZeroExtendRandomness<T, n, m, f, k, Rank> zero_extend_randomness[RECIPROCAL_NR_ITERS];
+};
+
+template <typename T, int Rank>
+size_t get_reciprocal_random_size(int batch, int row, int col){
+    return get_exp_random_size<T, Rank>(batch, row, col) + get_square_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_elementwise_mul_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_zero_extend_random_size<T, Rank>(batch, row, col) * (RECIPROCAL_NR_ITERS + 1);
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+ReciprocalRandomness<T, n, m, f, k, Rank> read_reciprocal_randomness(MPC& mpc, int batch, int row, int col){
+    ReciprocalRandomness<T, n, m, f, k, Rank> randomness;
+    randomness.exp_randomness = read_exp_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+    for(int i = 0; i < RECIPROCAL_NR_ITERS; ++i){
+        randomness.square_randomness[i] = read_square_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+        randomness.elementwise_mul_randomness[i] = read_elementwise_mul_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+        randomness.zero_extend_randomness[i] = read_zero_extend_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+    }
+    return randomness;
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+void generate_reciprocal_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
+    int iters = RECIPROCAL_NR_ITERS;
+    generate_exp_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+    for(int i = 0; i < iters; ++i){
+        generate_square_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+        generate_elementwise_mul_randomness<T, n, m, f, k, Rank, Eigen::RowMajor>(p0_buf, p1_buf, batch, row, col);
+        generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+    }
+    return;
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+FixTensor<T, n, f, k, Rank> reciprocal_tensor(FixTensor<T, n, f, k, Rank> x_n_share, ReciprocalRandomness<T, n, m, f, k, Rank> randomness){
+    int iters = RECIPROCAL_NR_ITERS;
+    FixTensor<T, n, f, k, Rank> constant_n_tmp(x_n_share.dimensions());
+    FixTensor<T, m, f, k, Rank> constant_m_tmp(x_n_share.dimensions());
+    FixTensor<T, n, f, k, Rank> init_n_share(x_n_share.dimensions());
+    FixTensor<T, m, f, k, Rank> init_m_share(x_n_share.dimensions());
+    // init = 3 * e^{1-2*x} + 0.003
+    constant_n_tmp.setConstant(Fix<T, n, f, k>(2));
+    init_n_share = x_n_share * constant_n_tmp;
+    constant_n_tmp.setConstant(1.0);
+    init_n_share = constant_n_tmp - init_n_share;
+    init_n_share = exp_tensor<T, n, m, f, k, Rank>(init_n_share, randomness.exp_randomness);
+    constant_n_tmp.setConstant(Fix<T, n, f, k>(3));
+    init_n_share = constant_n_tmp * init_n_share;
+    constant_n_tmp.setConstant(0.003);
+    init_n_share = init_n_share + constant_n_tmp;
+
+    for(int i = 0; i < iters; i++){
+        constant_n_tmp.setConstant(Fix<T, n, f, k>(2));
+        auto term1 = constant_n_tmp * init_n_share;
+        init_m_share = change_bitwidth<m, f, k, T, n, f, k, Rank>(init_n_share);
+        auto x_m_share = change_bitwidth<m, f, k, T, n, f, k, Rank>(x_n_share);
+        auto sq = square_tensor_opt<T, n, m, f, k, Rank>(init_m_share, randomness.square_randomness[i], false);
+        auto sq_m_share = truncate_reduce_tensor(sq);
+        init_n_share = elementwise_mul_opt<T, n, m, f, k, Rank>(x_m_share, sq_m_share, randomness.elementwise_mul_randomness[i], false, false);
+        init_n_share = zero_extend_tensor<T, n, m, f, k, Rank>(truncate_reduce_tensor(init_n_share), randomness.zero_extend_randomness[i]);
+        init_n_share = term1 - init_n_share;   
+    }
+    return init_n_share;
 }

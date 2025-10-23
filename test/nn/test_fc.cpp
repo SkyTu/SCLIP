@@ -77,10 +77,10 @@ void test_fc(MPC& mpc) {
     }
 
     auto x_plain_rec=reconstruct_tensor(x_plain);
-    auto x_share = x_plain - fc_layer.U_fwd;
+    auto x_share = x_plain - fc_layer.randomness.matmul_randomness_fwd.U;
     auto x_reconstructed = reconstruct_tensor(x_share);
     
-    fc_layer.W_rec = reconstruct_tensor(fc_layer.W_share - fc_layer.V_fwd);
+    fc_layer.W_rec = reconstruct_tensor(fc_layer.W_share - fc_layer.randomness.matmul_randomness_fwd.V);
 
 
     std::cout << "execute forward pass" << std::endl;
@@ -95,7 +95,7 @@ void test_fc(MPC& mpc) {
     using OutgoingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::OutgoingGradTensor;
 
     // 2. Load backward pass randomness (now unified)
-    mpc.load_random_data("./randomness/P" + std::to_string(mpc.party) + "/fc_bwd_random.bin");
+    mpc.load_random_data("./randomness/P" + std::to_string(mpc.party) + "/fc_randomness.bin");
     fc_layer.readBackwardRandomness(mpc);
     std::cout << "Backward randomness loaded" << std::endl;
 

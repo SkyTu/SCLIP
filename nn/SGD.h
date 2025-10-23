@@ -8,16 +8,13 @@
 // This function performs the update on secret shared tensors.
 template <
     typename T, int W_BW, int F, int K_INT, int RANK, int OPTIONS,
-    typename GradTensorType, typename EtaType,
-    typename RmTensorType, typename ReTensorType, typename RmsbTensorType
+    typename GradTensorType, typename EtaType
 >
 void sgd_update(
     FixTensor<T, W_BW, F, K_INT, RANK, OPTIONS>& W_share,
     const GradTensorType& grad_share,
     const EtaType& eta,
-    const RmTensorType& r_m_share,
-    const ReTensorType& r_e_share,
-    const RmsbTensorType& r_msb_share
+    ZeroExtendRandomness<T, W_BW, W_BW - F, F, K_INT, RANK> randomness
 ) {
     // 1. Calculate the update term: grad * lr
     auto update_term_wide_expr = grad_share * eta;
@@ -30,7 +27,7 @@ void sgd_update(
 
     // 3. Securely extend the truncated value back to the original bitwidth (bw-bit)
     auto update_term_extended = zero_extend_tensor(
-        update_term_trunc, r_m_share, r_e_share, r_msb_share
+        update_term_trunc, randomness   
     );
 
     // 4. Perform the final update
