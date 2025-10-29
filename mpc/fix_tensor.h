@@ -53,13 +53,13 @@ public:
         this->Base::operator=(other);
         return *this;
     }
-
-    // New in-place truncation method
-    void trunc_in_place(int shift_bits) {
-        for (long long i = 0; i < this->size(); ++i) {
-            this->data()[i] = this->data()[i].trunc(shift_bits);
-        }
-    }
+ 
+     // New in-place truncation method
+     void trunc_in_place(int shift_bits) {
+         for (long long i = 0; i < this->size(); ++i) {
+             this->data()[i] = this->data()[i].trunc(shift_bits);
+         }
+     }
 
     void print(const std::string& title = "") const {
         if (!title.empty()) std::cout << title << std::endl;

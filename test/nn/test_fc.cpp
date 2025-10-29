@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <fstream>
 
 void test_fc(MPC& mpc) {
     std::cout << "--- Testing FC Layer Forward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
@@ -22,7 +23,7 @@ void test_fc(MPC& mpc) {
     using WeightTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::WeightTensor;
     using BiasTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::BiasTensor;
 
-    FCLayerParams params = {5, 2, 3, 4, false, false, 0}; // B, M, N, K, use_bias=false, reconstructed_input, trunc_bwd
+    FCLayerParams params = {5, 2, 3, false, false, 0}; // B, in_dim, out_dim, use_bias=false, reconstructed_input, trunc_bwd
     FCLayer<T, IN_BW, OUT_BW, F, K_INT> fc_layer(params);
 
     std::cout << "FC Layer initialized" << std::endl;
@@ -33,7 +34,7 @@ void test_fc(MPC& mpc) {
     uint8_t* weights_buffer = nullptr;
     uint8_t* weights_buffer_ptr = nullptr;
     if (mpc.party == 0) {
-        float w_data[] = {1.0, -1.0, 0.5, 1.2, -0.8, 1.2, 1.5, -0.5, 0.5, -0.5, 1.0, -1.0};
+        float w_data[] = {1.0, -1.0, 0.5, 1.2, -0.8, 1.2};
         float y_data[] = {0.1, -0.2, 0.3, -0.4};
         weights_buffer = new uint8_t[sizeof(w_data) + sizeof(y_data)];
         memcpy(weights_buffer, w_data, sizeof(w_data));
@@ -41,7 +42,7 @@ void test_fc(MPC& mpc) {
         weights_buffer_ptr = weights_buffer;
     }
     else{
-        float w_data[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        float w_data[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         float y_data[] = {0.0, 0.0, 0.0, 0.0};
         weights_buffer = new uint8_t[sizeof(w_data) + sizeof(y_data)];
         memcpy(weights_buffer, w_data, sizeof(w_data));
@@ -56,36 +57,46 @@ void test_fc(MPC& mpc) {
     std::cout << "Weights initialized" << std::endl;
 
     // Loading randomness is now handled by the FCLayer itself, using the MPC object.
+
+    // 3. Secret Share Input
+    InputTensor x_plain(params.B, params.in_dim);
+    InputTensor x_plain_share(params.B, params.in_dim);
+    x_plain.setValues({ {FixIn(0.5), FixIn(-1.0)}, 
+                        {FixIn(-2.0), FixIn(2.5)},
+                        {FixIn(1.0), FixIn(-1.0)},
+                        {FixIn(-1.0), FixIn(1.0)},
+                        {FixIn(0.5), FixIn(-1.0)}});
+    if (mpc.party == 0) {        
+        x_plain_share.setValues({ {FixIn(0.5), FixIn(-1.0)}, 
+                           {FixIn(-2.0), FixIn(2.5)},
+                           {FixIn(1.0), FixIn(-1.0)},
+                           {FixIn(-1.0), FixIn(1.0)},
+                           {FixIn(0.5), FixIn(-1.0)}});
+    }
+    else {
+        x_plain_share.setZero();
+    }
+
     std::cout << "Loading Randomness" << std::endl;
     fc_layer.readForwardRandomness(mpc);
     std::cout << "Randomness loaded" << std::endl;
-
-    // 3. Secret Share Input
-    InputTensor x_plain(params.B, params.M, params.N);
-    if (mpc.party == 0) {
-        x_plain.setZero();
-        Eigen::Tensor<FixIn, 2, Eigen::RowMajor> x_slice(params.M, params.N);
-        x_slice.setValues({ {FixIn(0.5), FixIn(-1.0), FixIn(1.5)}, {FixIn(-2.0), FixIn(2.5), FixIn(-3.0)} });
-        // Manually copy the 2D slice into the first batch of the 3D tensor
-        for (int i = 0; i < params.M; ++i) {
-            for (int j = 0; j < params.N; ++j) {
-                x_plain(0, i, j) = x_slice(i, j);
-            }
-        }
-    } else {
-        x_plain.setZero();
-    }
-
-    auto x_plain_rec=reconstruct_tensor(x_plain);
-    auto x_share = x_plain - fc_layer.randomness.matmul_randomness_fwd.U;
+    std::cout << fc_layer.randomness.matmul_randomness_fwd.U << std::endl;
+    auto tmp = reconstruct_tensor(fc_layer.randomness.matmul_randomness_fwd.U);
+    std::cout << "U_reconstructed" << std::endl;
+    std::cout << tmp << std::endl;
+    tmp = reconstruct_tensor(fc_layer.randomness.matmul_randomness_fwd.V);
+    std::cout << "V_reconstructed" << std::endl;
+    std::cout << tmp << std::endl;
+    auto x_share = x_plain_share - fc_layer.randomness.matmul_randomness_fwd.U;
     auto x_reconstructed = reconstruct_tensor(x_share);
-    
+    std::cout << "x_reconstructed" << std::endl;
+    std::cout << x_reconstructed << std::endl;
     fc_layer.W_rec = reconstruct_tensor(fc_layer.W_share - fc_layer.randomness.matmul_randomness_fwd.V);
 
 
     std::cout << "execute forward pass" << std::endl;
     // 4. Execute Forward Pass
-    auto y_share = fc_layer.forward<0>(x_plain, x_reconstructed);
+    auto y_share = fc_layer.forward<0>(x_plain_share, x_reconstructed);
     std::cout << "forward pass executed" << std::endl;
     auto y_reconstructed = reconstruct_tensor(y_share);
 
@@ -95,19 +106,33 @@ void test_fc(MPC& mpc) {
     using OutgoingGradTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::OutgoingGradTensor;
 
     // 2. Load backward pass randomness (now unified)
-    mpc.load_random_data("./randomness/P" + std::to_string(mpc.party) + "/fc_randomness.bin");
     fc_layer.readBackwardRandomness(mpc);
     std::cout << "Backward randomness loaded" << std::endl;
 
     // 3. Secret Share a 2D incoming gradient
-    IncomingGradTensor incoming_grad_plain(params.M, params.K);
+    IncomingGradTensor incoming_grad_plain(params.B, params.out_dim);
     if (mpc.party == 0) {
-        incoming_grad_plain.setValues({{FixIn(0.1), FixIn(0.2), FixIn(0.3), FixIn(0.4)}, {FixIn(-0.1), FixIn(-0.2), FixIn(-0.3), FixIn(-0.4)}});
+        incoming_grad_plain.setZero();
+        Eigen::Tensor<FixIn, 2, Eigen::RowMajor> incoming_grad_slice(params.B, params.out_dim);
+        incoming_grad_slice.setValues({{FixIn(0.1), FixIn(0.2), FixIn(0.3)}, 
+                                       {FixIn(0.1), FixIn(0.2), FixIn(0.3)}, 
+                                       {FixIn(-0.1), FixIn(-0.2), FixIn(-0.3)}, 
+                                       {FixIn(0.1), FixIn(0.2), FixIn(0.3)}, 
+                                       {FixIn(-0.1), FixIn(-0.2), FixIn(-0.3)}});
+        for (int i = 0; i < params.B; ++i) {
+            for (int j = 0; j < params.out_dim; ++j) {
+                incoming_grad_plain(i, j) = incoming_grad_slice(i, j);
+            }
+        }
     }
-    auto incoming_grad_share = secret_share_tensor(incoming_grad_plain);
-
+    else {
+        incoming_grad_plain.setZero();
+    }
+    auto incoming_grad_share_rec = incoming_grad_plain - fc_layer.randomness.matmul_randomness_bwd.U;
+    incoming_grad_share_rec = reconstruct_tensor(incoming_grad_share_rec);
+    std::cout << "incoming_grad_share_reconstructed" << std::endl;
     // 4. Execute Backward Pass and SGD Update
-    auto outgoing_grad_share = fc_layer.backward(incoming_grad_share);
+    auto outgoing_grad_share = fc_layer.backward(incoming_grad_share_rec, incoming_grad_plain);
     fc_layer.update(LR);
 
     // 5. Reconstruct results for verification
@@ -117,15 +142,10 @@ void test_fc(MPC& mpc) {
     // 6. Plaintext Verification
     if (mpc.party == 0) {
         // verify forward
-        WeightTensor W_plain(params.N, params.K);
-        W_plain.setValues({ {FixIn(1.0), FixIn(-1.0), FixIn(0.5), FixIn(1.2)}, {FixIn(-0.8), FixIn(1.2), FixIn(1.5), FixIn(-0.5)}, {FixIn(0.5), FixIn(-0.5), FixIn(1.0), FixIn(-1.0)} });
+        WeightTensor W_plain(params.in_dim, params.out_dim);
+        W_plain.setValues({{FixIn(1.0), FixIn(-1.0)}, {FixIn(0.5), FixIn(1.2)}, {FixIn(-0.8), FixIn(1.2)} });
         
-        auto expected_mul_expr = tensor_mul(x_plain, W_plain);
-        
-        FixTensor<T, IN_BW, F, K_INT, 3> expected_mul(params.B, params.M, params.K);
-        for(int i = 0; i < expected_mul.size(); ++i) {
-            expected_mul.data()[i].val = expected_mul_expr.data()[i].val;
-        }
+        auto expected_mul = tensor_mul(x_plain, W_plain);
         
         auto expected_trunc = truncate_reduce_tensor(expected_mul);
         auto expected_y_final = change_bitwidth<OUT_BW, F, K_INT>(expected_trunc);
@@ -151,9 +171,8 @@ void test_fc(MPC& mpc) {
         std::cout << "dE/dX (2D) verification passed." << std::endl;
         
         // --- Verify dE/dW and SGD update ---
-        auto x_plain_sum = sum_reduce_tensor(x_plain);
-        auto x_plain_sum_T_expr = x_plain_sum.shuffle(Eigen::array<int, 2>{1, 0});
-        WeightTensor x_plain_sum_T = x_plain_sum_T_expr;
+        auto x_plain_expr = x_plain.shuffle(Eigen::array<int, 2>{1, 0});
+        WeightTensor x_plain_sum_T = x_plain_expr;
         auto expected_dW_wide = tensor_mul(x_plain_sum_T, incoming_grad_plain);
 
         float scaled_lr = LR / params.B;
@@ -175,6 +194,11 @@ void test_fc(MPC& mpc) {
     std::cout << "Party " << mpc.party << " FC Layer Forward test passed!" << std::endl;
 }
 
+bool file_exists(const std::string& path) {
+    std::ifstream file(path);
+    return file.good();
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " <party>" << std::endl;
@@ -183,7 +207,12 @@ int main(int argc, char** argv) {
     int party = std::atoi(argv[1]);
     MPC mpc(2, party);
     
-    std::string randomness_path = "randomness/P" + std::to_string(party) + "/fc_fwd_random.bin";
+    std::string randomness_path = "./randomness/P" + std::to_string(party) + "/fc_randomness.bin";
+    if (file_exists(randomness_path)) {
+        std::cout << "文件存在: " << randomness_path << std::endl;
+    } else {
+        std::cout << "文件不存在: " << randomness_path << std::endl;
+    }
     mpc.load_random_data(randomness_path);
     
     std::vector<std::string> addrs = {"127.0.0.1", "127.0.0.1"};

@@ -22,10 +22,18 @@ ZeroExtendRandomness<T, BW, smallBW, F, K, Rank> read_zero_extend_randomness(MPC
         randomness.R_E.resize(batch, row, col);
         randomness.R_MSB.resize(batch, row, col);
     }
-    else{
+    else if constexpr(Rank == 2){
         randomness.R_M.resize(row, col);
         randomness.R_E.resize(row, col);
         randomness.R_MSB.resize(row, col);
+    }
+    else if constexpr(Rank == 1){
+        randomness.R_M.resize(row);
+        randomness.R_E.resize(row);
+        randomness.R_MSB.resize(row);
+    }
+    else{
+        throw std::runtime_error("Invalid rank for zero extend randomness");
     }
     mpc.read_fixtensor_share(randomness.R_M);
     mpc.read_fixtensor_share(randomness.R_E);
@@ -42,8 +50,13 @@ template <typename T, int Rank>
 int get_zero_extend_random_size(int batch, int row, int col){
     if(Rank == 3){
         return (batch * row * col + batch * row * col + batch * row * col) * sizeof(T);
-    }else{
+    }else if (Rank == 2){
         return (row * col + row * col + row * col) * sizeof(T);
+    }else if (Rank == 1){
+        return (row + row + row) * sizeof(T);
+    }
+    else{
+        throw std::runtime_error("Invalid rank for zero extend randomness");
     }
 }
 
@@ -69,10 +82,15 @@ void generate_zero_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, 
         r_m.resize(batch, row, col);
         r_e.resize(batch, row, col);
         r_msb.resize(batch, row, col);
-    } else {
+    } else if constexpr (Rank == 2) {
         r_m.resize(row, col);
         r_e.resize(row, col);
         r_msb.resize(row, col);
+    }
+    else{
+        r_m.resize(row);
+        r_e.resize(row);
+        r_msb.resize(row);
     }
 
     r_m.setRandom();

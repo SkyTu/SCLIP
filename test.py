@@ -9,5 +9,5 @@ def inv_sqrt(x):
     return y
 
 for _ in range(100):
-    x_tmp = random.uniform(0, 1) 
+    x_tmp = 385
     print(x_tmp, inv_sqrt(x_tmp), 1/math.sqrt(x_tmp))

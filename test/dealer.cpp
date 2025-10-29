@@ -60,7 +60,7 @@ int main() {
     total_size += get_exp_random_size<T, 3>(20, 20, 20);
     std::cout << "Total size per party: " << total_size << " bytes." << std::endl;
     // For test_inv_sqrt_tensor
-    total_size += get_inv_sqrt_random_size<T, BW, M_BITS, F, K, 3>(1, 3, 3);
+    total_size += get_inv_sqrt_random_size<T, 3>(1, 3, 3);
     std::cout << "total_size: " << total_size << std::endl;
 
     total_size += get_reciprocal_random_size<T, 3>(1, 3, 3);

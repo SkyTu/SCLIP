@@ -467,7 +467,8 @@ void test_square_tensor_opt_3d(MPC& mpc) {
     SquareRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;
     randomness = read_square_randomness<uint64_t, BW, M_BITS, F, K, 3>(mpc, 20, 20, 20);
 
-    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 3>(X_m_share, randomness);
+    X_m_share = reconstruct_tensor(X_m_share + randomness.R);
+    auto X_square_share = square_tensor_opt<uint64_t, BW, M_BITS, F, K, 3>(X_m_share, randomness, true);
     auto X_reconstructed = reconstruct_tensor(X_square_share);
 
     FixTensorBW X_n_plain = change_bitwidth<BW, F, K>(X_m_plain);

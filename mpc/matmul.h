@@ -111,11 +111,15 @@ auto secure_matmul(
     }
     else if (e_ptr == nullptr && f_rec_ptr != nullptr) {
         e = x_share - randomness.U;
-        f_rec_val = reconstruct_tensor(*f_rec_ptr - randomness.V);
+        reconstruct_tensor(e);
+        f_rec_val = *f_rec_ptr;
+        std::cout << "e is nullptr, f_rec_ptr is not nullptr" << std::endl;
     }
     else if (e_ptr != nullptr && f_rec_ptr == nullptr) {
-        e = reconstruct_tensor(*e_ptr - randomness.U);
+        e = *e_ptr;
         f_rec_val = y_share - randomness.V;
+        reconstruct_tensor(f_rec_val);
+        std::cout << "f is nullptr" << std::endl;
     }
     else{
         e = *e_ptr;
@@ -166,11 +170,13 @@ auto secure_matmul(
     }
     else if (e_ptr == nullptr && f_rec_ptr != nullptr) {
         e = x_share - randomness.U;
-        f_rec_val = reconstruct_tensor(*f_rec_ptr - randomness.V);
+        reconstruct_tensor(e);
+        f_rec_val = *f_rec_ptr;
     }
     else if (e_ptr != nullptr && f_rec_ptr == nullptr) {
-        e = reconstruct_tensor(*e_ptr - randomness.U);
+        e = *e_ptr;
         f_rec_val = y_share - randomness.V;
+        reconstruct_tensor(f_rec_val);
     }
     else{
         e = *e_ptr;

@@ -20,8 +20,8 @@ void dealer_generate_fc_randomness() {
     const int IN_BW_fc = 64;
     const int OUT_BW_fc = 48;
 
-    // Parameters for the FC layer (B, M, N, K, use_bias, reconstructed_input, trunc_bwd)
-    FCLayerParams params_fc = {5, 2, 3, 4, false, false, 0};
+    // Parameters for the FC layer (B, in_dim, out_dim, use_bias, reconstructed_input, trunc_bwd)
+    FCLayerParams params_fc = {5, 2, 3, false, false, 0};
     FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc> fc_layer(params_fc);
 
     // --- Generate Forward Randomness ---
@@ -40,14 +40,14 @@ void dealer_generate_fc_randomness() {
         std::cerr << "Error opening file for party 0." << std::endl;
         return; // Changed from return 1 to return
     }
-    p0_randomness_file.write(reinterpret_cast<const char*>(randomness_buf_0.ptr), randomness_size);
+    p0_randomness_file.write(reinterpret_cast<const char*>(p0_data), randomness_size);
     p0_randomness_file.close();
     std::ofstream p1_randomness_file(p1_randomness_path, std::ios::binary);
     if (!p1_randomness_file) {
         std::cerr << "Error opening file for party 1." << std::endl;
         return; // Changed from return 1 to return
     }
-    p1_randomness_file.write(reinterpret_cast<const char*>(randomness_buf_1.ptr), randomness_size);
+    p1_randomness_file.write(reinterpret_cast<const char*>(p1_data), randomness_size);
     p1_randomness_file.close();
 
     // 6. Clean up allocated memory

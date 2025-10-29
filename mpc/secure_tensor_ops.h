@@ -114,7 +114,7 @@ FixTensor<T, n, f, k, Rank, Options> exp_tensor(FixTensor<T, n, f, k, Rank, Opti
     return res;
 }
 
-template <typename T, int n, int m, int f, int k, int Rank>
+template <typename T, int Rank>
 size_t get_inv_sqrt_random_size(int batch, int row, int col){
     size_t size = 0, m_size = 0, n_size = 0;
     size += get_zero_extend_random_size<T, Rank>(batch, row, col);
@@ -153,12 +153,21 @@ InvSqrtRandomness<T, n, m, f, k, Rank> read_inv_sqrt_randomness(MPC& mpc, int ba
     
     for(int i = 0; i < INV_SQRT_NR_ITERS; ++i){
         randomness.square_randomness[i] = read_square_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
-        randomness.elementwise_mul_randomness_opt[i].r_x_m.resize(batch, row, col);
-        randomness.elementwise_mul_randomness_opt[i].r_x_n.resize(batch, row, col);
-        randomness.elementwise_mul_randomness_opt[i].r_x_msb.resize(batch, row, col);
-        randomness.elementwise_mul_randomness_opt[i].r_xy.resize(batch, row, col);
-        randomness.elementwise_mul_randomness_opt[i].r_x_rymsb.resize(batch, row, col);
-        randomness.elementwise_mul_randomness_opt[i].r_xmsb_y.resize(batch, row, col);
+        if constexpr (Rank == 3) {
+            randomness.elementwise_mul_randomness_opt[i].r_x_m.resize(batch, row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_x_n.resize(batch, row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_x_msb.resize(batch, row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_xy.resize(batch, row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_x_rymsb.resize(batch, row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_xmsb_y.resize(batch, row, col);
+        } else if constexpr (Rank == 2) {
+            randomness.elementwise_mul_randomness_opt[i].r_x_m.resize(row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_x_n.resize(row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_x_msb.resize(row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_xy.resize(row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_x_rymsb.resize(row, col);
+            randomness.elementwise_mul_randomness_opt[i].r_xmsb_y.resize(row, col);
+        }
         mpc.read_fixtensor_share(randomness.elementwise_mul_randomness_opt[i].r_x_m);
         mpc.read_fixtensor_share(randomness.elementwise_mul_randomness_opt[i].r_x_n);
         mpc.read_fixtensor_share(randomness.elementwise_mul_randomness_opt[i].r_x_msb);
@@ -175,7 +184,7 @@ InvSqrtRandomness<T, n, m, f, k, Rank> read_inv_sqrt_randomness(MPC& mpc, int ba
     return randomness;
 }
 
-// by default, the inv_sqrt input will be 3D
+
 template <typename T, int n, int m, int f, int k, int Rank>
 void generate_inv_sqrt_randomness(Buffer& p0_buf, Buffer& p1_buf,int batch, int row, int col){
     int iters = INV_SQRT_NR_ITERS;
@@ -206,7 +215,7 @@ void generate_inv_sqrt_randomness(Buffer& p0_buf, Buffer& p1_buf,int batch, int 
             r_x_rymsb.resize(batch, row, col);
             r_xmsb_y.resize(batch, row, col);
         }
-        else{
+        else if constexpr (Rank == 2) {
             R.resize(row, col);
             R_N.resize(row, col);
             R_SQUARE.resize(row, col);
