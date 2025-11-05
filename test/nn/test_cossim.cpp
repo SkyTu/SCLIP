@@ -1,4 +1,4 @@
-#include "nn/L2NormParallel.h"
+#include "nn/CosineSimilarity.h"
 #include "mpc/mpc.h"
 #include "mpc/tensor_ops.h"
 #include <iostream>
@@ -7,8 +7,8 @@
 #include <fstream>
 #include <cmath>
 
-void test_l2norm_parallel(MPC& mpc) {
-    std::cout << "--- Testing L2NormParallel Layer Forward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+void test_cosinesim(MPC& mpc) {
+    std::cout << "--- Testing CosineSimilarity Layer Forward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
 
     using T = uint64_t;
     const int IN_BW = 48;
@@ -17,12 +17,12 @@ void test_l2norm_parallel(MPC& mpc) {
     const int K_INT = 15;
 
     using FixIn = Fix<T, IN_BW, F, K_INT>;
-    using InputTensor = L2NormLayer<T, IN_BW, OUT_BW, F, K_INT>::InputTensor;
+    using InputTensor = CosSimLayer<T, IN_BW, OUT_BW, F, K_INT>::InputTensor;
     
-    L2NormLayerParams params = {5, 10}; // B=5, in_dim=10
-    L2NormLayer<T, IN_BW, OUT_BW, F, K_INT> l2_layer(params);
+    CosSimLayerParams params = {5, 10}; // B=5, in_dim=10
+    CosSimLayer<T, IN_BW, OUT_BW, F, K_INT> cosinesim_layer(params);
 
-    std::cout << "L2NormParallel Layer initialized" << std::endl;
+    std::cout << "CosineSimilarity Layer initialized" << std::endl;
 
     // 1. Secret Share Inputs
     InputTensor image_plain(params.B, params.in_dim);
@@ -54,11 +54,11 @@ void test_l2norm_parallel(MPC& mpc) {
     std::cout << "input is " << image_plain << " and " << text_plain << std::endl;
     
     std::cout << "Loading Randomness" << std::endl;
-    l2_layer.read_randomness(mpc);
+    cosinesim_layer.read_randomness(mpc);
     std::cout << "Randomness loaded" << std::endl;
 
     std::cout << "Executing forward pass" << std::endl;
-    auto y_share = l2_layer.forward(image_share, text_share);
+    auto y_share = cosinesim_layer.forward(image_share, text_share);
     std::cout << "Forward pass executed" << std::endl;
 
     auto y_reconstructed = reconstruct_tensor(y_share);
@@ -101,13 +101,13 @@ void test_l2norm_parallel(MPC& mpc) {
                 std::cout << y_reconstructed.data()[i].to_float<double>();
             }
         }
-        std::cout << "L2NormParallel forward verification passed." << std::endl;
+        std::cout << "CosineSimilarity forward verification passed." << std::endl;
     }
 
     // --- Backward Pass Test ---
-    std::cout << "\n--- Testing L2NormParallel Layer Backward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+    std::cout << "\n--- Testing CosineSimilarity Layer Backward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
 
-    using IncomingGradTensor = L2NormLayer<T, IN_BW, OUT_BW, F, K_INT>::IncomingGradTensor;
+    using IncomingGradTensor = CosSimLayer<T, IN_BW, OUT_BW, F, K_INT>::IncomingGradTensor;
     IncomingGradTensor incoming_grad_share(params.B, params.B);
     IncomingGradTensor incoming_grad_plain(params.B, params.B);
     IncomingGradTensor incoming_grad_plain_T(params.B, params.B);
@@ -125,7 +125,7 @@ void test_l2norm_parallel(MPC& mpc) {
     std::cout << "incoming_grad_plain: " << incoming_grad_plain << std::endl;
     incoming_grad_plain_T = incoming_grad_plain.shuffle(Eigen::array<int, 2>{1, 0});
     std::cout << "incoming_grad_plain_T: " << incoming_grad_plain_T << std::endl;
-    auto [dI_share, dT_share] = l2_layer.backward(incoming_grad_share);
+    auto [dI_share, dT_share] = cosinesim_layer.backward(incoming_grad_share);
     // auto dI_share = l2_layer.backward(incoming_grad_share);
     auto dI_reconstructed = reconstruct_tensor(dI_share);
     auto dT_reconstructed = reconstruct_tensor(dT_share);
@@ -209,7 +209,7 @@ void test_l2norm_parallel(MPC& mpc) {
                 std::cout << dT_reconstructed.data()[i].to_float<double>() << " " << dT_final_full_bw.data()[i].to_float<double>() << std::endl;
             }
         }
-        std::cout << "L2NormParallel backward verification passed." << std::endl;
+        std::cout << "CosineSimilarity backward verification passed." << std::endl;
         std::cout << "Expected Gradient:\n" << dT_final_full_bw << std::endl;
         std::cout << "Reconstructed Gradient:\n" << dT_reconstructed << std::endl;
     }
@@ -240,7 +240,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> addrs = {"127.0.0.1", "127.0.0.1"};
     mpc.connect(addrs, 9001);
 
-    test_l2norm_parallel(mpc);
+    test_cosinesim(mpc);
 
     return 0;
 }

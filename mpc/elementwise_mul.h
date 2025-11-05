@@ -83,11 +83,14 @@ void generate_elementwise_mul_randomness(
     FixTensor<T, m, f, k, Rank, Options>* r_y_m = nullptr
 ){
     Random rg;
+    FixTensor<T, m, f, k, Rank, Options> r_x_m_storage, r_y_m_storage;
+
     if constexpr (Rank == 3) {
         FixTensor<T, n, f, k, Rank, Options> r_x_n(batch, row, col), r_y_n(batch, row, col), r_x_msb(batch, row, col), r_y_msb(batch, row, col);
         FixTensor<T, n, f, k, Rank, Options> r_xy(batch, row, col), r_x_rymsb(batch, row, col), r_xmsb_y(batch, row, col);
         if (r_x_m == nullptr) {
-            r_x_m = new FixTensor<T, m, f, k, Rank, Options>(batch, row, col);
+            r_x_m_storage.resize(batch, row, col);
+            r_x_m = &r_x_m_storage;
             T* val = rg.template randomGE<T>(batch * row * col, m);
             for (int i = 0; i < batch; i++) {
                 for (int j = 0; j < row; j++) {
@@ -103,7 +106,8 @@ void generate_elementwise_mul_randomness(
             r_x_n = extend_locally<n,f,k>(*r_x_m);
         }
         if (r_y_m == nullptr) {
-            r_y_m = new FixTensor<T, m, f, k, Rank, Options>(batch, row, col);
+            r_y_m_storage.resize(batch, row, col);
+            r_y_m = &r_y_m_storage;
             T* val = rg.template randomGE<T>(batch * row * col, m);
             for (int i = 0; i < batch; i++) {
                 for (int j = 0; j < row; j++) {
@@ -136,7 +140,8 @@ void generate_elementwise_mul_randomness(
         FixTensor<T, n, f, k, Rank, Options> r_x_n(row, col), r_y_n(row, col), r_x_msb(row, col), r_y_msb(row, col);
         FixTensor<T, n, f, k, Rank, Options> r_xy(row, col), r_x_rymsb(row, col), r_xmsb_y(row, col);
         if (r_x_m == nullptr) {
-            r_x_m = new FixTensor<T, m, f, k, Rank, Options>(row, col);
+            r_x_m_storage.resize(row, col);
+            r_x_m = &r_x_m_storage;
             T* val = rg.template randomGE<T>(row * col, m);
             for (int i = 0; i < row; i++) {
                 for (int j = 0; j < col; j++) {
@@ -150,7 +155,8 @@ void generate_elementwise_mul_randomness(
             r_x_n = extend_locally<n,f,k>(*r_x_m);
         }
         if (r_y_m == nullptr) {
-            r_y_m = new FixTensor<T, m, f, k, Rank, Options>(row, col);
+            r_y_m_storage.resize(row, col);
+            r_y_m = &r_y_m_storage;
             T* val = rg.template randomGE<T>(row * col, m);
             for (int i = 0; i < row; i++) {
                 for (int j = 0; j < col; j++) {
