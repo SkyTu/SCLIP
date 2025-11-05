@@ -180,18 +180,18 @@ public:
             }
         }
         generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(p0_buf, p1_buf, 2, p.B, p.in_dim, &R);
-        // FixTensor<T, OUT_BW, F, K_INT, 2> U_I(p.B, p.B);
-        // val = rg.template randomGE<T>(p.B * p.B, OUT_BW);
-        // for(int i = 0; i < p.B; i++) {
-        //     for(int j = 0; j < p.B; j++) {
-        //         U_I(i, j) = Fix<T, OUT_BW, F, K_INT>(val[i * p.B + j]);
-        //     }
-        // }
-        // delete[] val;
+        FixTensor<T, OUT_BW, F, K_INT, 2> U_I(p.B, p.B);
+        val = rg.template randomGE<T>(p.B * p.B, OUT_BW);
+        for(int i = 0; i < p.B; i++) {
+            for(int j = 0; j < p.B; j++) {
+                U_I(i, j) = Fix<T, OUT_BW, F, K_INT>(val[i * p.B + j]);
+            }
+        }
+        delete[] val;
         // U_I.setRandom();
         // std::cout << "U_I is " << U_I << std::endl;
-        // generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim, &U_I);
-        generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim);
+        generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim, &U_I);
+        // generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim);
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.in_dim, nullptr, &R_I);
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.in_dim, &R_I, nullptr);
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.in_dim, nullptr, &R_Norm_I);
@@ -299,9 +299,9 @@ public:
         // --- L2 Normalization Backward ---
         // for image
         // dI = (dL/dy) @ image  (B, B) @ (B, dim) -> (B, dim)
-        // FixTensor<T, OUT_BW, F, K_INT, 2> incoming_grad_rec = reconstruct_tensor(incoming_grad_share - randomness.matmul_randomness_bwd_I.U);
-        // FixTensor<T, OUT_BW, F, K_INT, 2> dI = secure_matmul(incoming_grad_share, image_ext_share, randomness.matmul_randomness_bwd_I, &incoming_grad_rec);
-        FixTensor<T, OUT_BW, F, K_INT, 2> dI = secure_matmul(incoming_grad_share, image_ext_share, randomness.matmul_randomness_bwd_I);
+        FixTensor<T, OUT_BW, F, K_INT, 2> incoming_grad_rec = reconstruct_tensor(incoming_grad_share - randomness.matmul_randomness_bwd_I.U);
+        FixTensor<T, OUT_BW, F, K_INT, 2> dI = secure_matmul(incoming_grad_share, image_ext_share, randomness.matmul_randomness_bwd_I, &incoming_grad_rec);
+        // FixTensor<T, OUT_BW, F, K_INT, 2> dI = secure_matmul(incoming_grad_share, image_ext_share, randomness.matmul_randomness_bwd_I);
         FixTensor<T, IN_BW, F, K_INT, 2> dI_m = truncate_reduce_tensor(dI);
         auto tmp_dI_m = reconstruct_tensor(dI_m);
         std::cout << "tmp_dI_m:" << tmp_dI_m << std::endl;
