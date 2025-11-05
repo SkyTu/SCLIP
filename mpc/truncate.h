@@ -73,30 +73,59 @@ void generate_zero_extend_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
 }
 
 template <typename T, int BW, int smallBW, int F, int K, int Rank>
-void generate_zero_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
-    FixTensor<T, smallBW, F, K, Rank> r_m;
+void generate_zero_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col, FixTensor<T, smallBW, F, K, Rank>* r_m = nullptr){
     FixTensor<T, BW, F, K, Rank> r_e;
     FixTensor<T, BW, F, K, Rank> r_msb;
-
+    Random rg;
     if constexpr (Rank == 3) {
-        r_m.resize(batch, row, col);
         r_e.resize(batch, row, col);
         r_msb.resize(batch, row, col);
+        T* val = rg.template randomGE<T>(batch * row * col, smallBW);
+        if(r_m == nullptr){
+            r_m = new FixTensor<T, smallBW, F, K, Rank>(batch, row, col);
+            for (int i = 0; i < batch; i++) {
+                for (int j = 0; j < row; j++) {
+                    for (int z = 0; z < col; z++) {
+                        (*r_m)(i, j, z) = Fix<T, smallBW, F, K>(val[i * row * col + j * col + z]);
+                    }
+                }
+            }
+        }
+        r_e = extend_locally<BW, F, K>(*r_m);
+        r_msb = get_msb<BW, F, K>(*r_m);    
+        delete[] val; // <--- 必须加上这一行！
     } else if constexpr (Rank == 2) {
-        r_m.resize(row, col);
         r_e.resize(row, col);
         r_msb.resize(row, col);
+        T* val = rg.template randomGE<T>(row * col, smallBW);
+        if(r_m == nullptr){
+            r_m = new FixTensor<T, smallBW, F, K, Rank>(row, col);
+            for (int i = 0; i < row; i++) {
+                for (int j = 0; j < col; j++) {
+                    (*r_m)(i, j) = Fix<T, smallBW, F, K>(val[i * col + j]);
+                }
+            }
+        }
+        delete[] val; // <--- 必须加上这一行！
+        r_e = extend_locally<BW, F, K>(*r_m);
+        r_msb = get_msb<BW, F, K>(*r_m);
     }
     else{
-        r_m.resize(row);
         r_e.resize(row);
         r_msb.resize(row);
+        T* val = rg.template randomGE<T>(row, smallBW);
+        
+        if(r_m == nullptr){
+            r_m = new FixTensor<T, smallBW, F, K, Rank>(row);
+            for (int i = 0; i < row; i++) {
+                (*r_m)(i) = Fix<T, smallBW, F, K>(val[i]); 
+            }
+        }
+        delete[] val; // <--- 必须加上这一行！
+        r_e = extend_locally<BW, F, K>(*r_m);
+        r_msb = get_msb<BW, F, K>(*r_m);
     }
-
-    r_m.setRandom();
-    r_e = extend_locally<BW, F, K>(r_m);
-    r_msb = get_msb<BW, F, K>(r_e);
-    secret_share_and_write_tensor(r_m, p0_buf, p1_buf);
+    secret_share_and_write_tensor(*r_m, p0_buf, p1_buf);
     secret_share_and_write_tensor(r_e, p0_buf, p1_buf);
     secret_share_and_write_tensor(r_msb, p0_buf, p1_buf);
 }

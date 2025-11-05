@@ -67,8 +67,61 @@ void test_concatenate_manual() {
     std::cout << "Axis 1 concatenation passed." << std::endl;
 }
 
+template <typename T, int BW, int F, int K_INT>
+void test_set_random_bit_length(int rows, int cols) {
+    std::cout << "--- Testing FixTensor<" << BW << " bits>(" << rows << "x" << cols << ") ---" << std::endl;
+
+    FixTensor<T, BW, F, K_INT, 2> tensor(rows, cols);
+    tensor.setRandom();
+
+    bool all_bits_correct = true;
+    // The mask will have 1s for all bits beyond BW.
+    // e.g., if BW=48, T=uint64_t, mask will be 0xFFFF000000000000
+    T mask = (static_cast<T>(-1) << BW); 
+
+    for (int i = 0; i < tensor.size(); ++i) {
+        T raw_value = tensor.data()[i].val;
+        // Check if any bits are set in the masked region (i.e., beyond BW)
+        if ((raw_value & mask) != 0) {
+            all_bits_correct = false;
+            std::cout << "Error: Value exceeds bit width " << BW << " at index " << i << std::endl;
+            std::cout << "Value (hex): 0x" << std::hex << raw_value << std::dec << std::endl;
+            break; 
+        }
+    }
+
+    if (all_bits_correct) {
+        std::cout << "Success: All random numbers are within the specified bit width (" << BW << " bits)." << std::endl;
+    } else {
+        std::cout << "Failure: At least one random number exceeded the bit width." << std::endl;
+    }
+
+    std::cout << "Sample values (hex):" << std::endl;
+    int samples_to_show = std::min(5, (int)tensor.size());
+    for (int i = 0; i < samples_to_show; ++i) {
+        std::cout << "  0x" << std::hex << tensor.data()[i].val << std::dec << std::endl;
+    }
+    std::cout << std::endl;
+}
+
 int main() {
     test_concatenate_manual();
     std::cout << "FixTensor ops test passed!" << std::endl;
+
+    using T = uint64_t;
+    const int F = 16;
+    const int K_INT = 15;
+
+    // Test with a bit width that is less than the underlying type T
+    const int BW_48 = 48;
+    test_set_random_bit_length<T, BW_48, F, K_INT>(1, 1);
+    test_set_random_bit_length<T, BW_48, F, K_INT>(3, 4);
+    test_set_random_bit_length<T, BW_48, F, K_INT>(5, 5);
+
+    // Test with a bit width that is equal to the underlying type T
+    // In this case, the mask check is trivial but good to verify
+    const int BW_64 = 64;
+    test_set_random_bit_length<T, BW_64, F, K_INT>(2, 2);
+
     return 0;
 }

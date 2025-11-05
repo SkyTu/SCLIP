@@ -78,23 +78,53 @@ void generate_elementwise_mul_randomness(
     Buffer& p1_buf,
     int batch,
     int row,
-    int col
+    int col,
+    FixTensor<T, m, f, k, Rank, Options>* r_x_m = nullptr,
+    FixTensor<T, m, f, k, Rank, Options>* r_y_m = nullptr
 ){
+    Random rg;
     if constexpr (Rank == 3) {
-        FixTensor<T, m, f, k, Rank, Options> r_x_m(batch, row, col), r_y_m(batch, row, col);
         FixTensor<T, n, f, k, Rank, Options> r_x_n(batch, row, col), r_y_n(batch, row, col), r_x_msb(batch, row, col), r_y_msb(batch, row, col);
         FixTensor<T, n, f, k, Rank, Options> r_xy(batch, row, col), r_x_rymsb(batch, row, col), r_xmsb_y(batch, row, col);
-        r_x_m.setRandom();
-        r_y_m.setRandom();
-        r_x_n = extend_locally<n,f,k>(r_x_m);
-        r_y_n = extend_locally<n,f,k>(r_y_m);
-        r_x_msb = get_msb<n,f,k>(r_x_n);
-        r_y_msb = get_msb<n,f,k>(r_y_n);
+        if (r_x_m == nullptr) {
+            r_x_m = new FixTensor<T, m, f, k, Rank, Options>(batch, row, col);
+            T* val = rg.template randomGE<T>(batch * row * col, m);
+            for (int i = 0; i < batch; i++) {
+                for (int j = 0; j < row; j++) {
+                    for (int z = 0; z < col; z++) {
+                        (*r_x_m)(i, j, z) = Fix<T, m, f, k>(val[i * row * col + j * col + z]);
+                        r_x_n(i, j, z) = Fix<T, n, f, k>(val[i * row * col + j * col + z]);
+                    }
+                }
+            }
+            delete[] val; // <--- 必须加上这一行！
+        }
+        else{
+            r_x_n = extend_locally<n,f,k>(*r_x_m);
+        }
+        if (r_y_m == nullptr) {
+            r_y_m = new FixTensor<T, m, f, k, Rank, Options>(batch, row, col);
+            T* val = rg.template randomGE<T>(batch * row * col, m);
+            for (int i = 0; i < batch; i++) {
+                for (int j = 0; j < row; j++) {
+                    for (int z = 0; z < col; z++) {
+                        (*r_y_m)(i, j, z) = Fix<T, m, f, k>(val[i * row * col + j * col + z]);
+                        r_y_n(i, j, z) = Fix<T, n, f, k>(val[i * row * col + j * col + z]);
+                    }
+                }
+            }
+            delete[] val; // <--- 必须加上这一行！
+        }
+        else{
+            r_y_n = extend_locally<n,f,k>(*r_y_m);
+        }
+        r_x_msb = get_msb<n,f,k>(*r_x_m);
+        r_y_msb = get_msb<n,f,k>(*r_y_m);
         r_xy = r_x_n * r_y_n;
         r_x_rymsb = r_x_n * r_y_msb;
         r_xmsb_y = r_x_msb * r_y_n;
-        secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
-        secret_share_and_write_tensor(r_y_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(*r_x_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(*r_y_m, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_y_n, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
@@ -103,20 +133,43 @@ void generate_elementwise_mul_randomness(
         secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
     } else {
-        FixTensor<T, m, f, k, Rank, Options> r_x_m(row, col), r_y_m(row, col);
         FixTensor<T, n, f, k, Rank, Options> r_x_n(row, col), r_y_n(row, col), r_x_msb(row, col), r_y_msb(row, col);
         FixTensor<T, n, f, k, Rank, Options> r_xy(row, col), r_x_rymsb(row, col), r_xmsb_y(row, col);
-        r_x_m.setRandom();
-        r_y_m.setRandom();
-        r_x_n = extend_locally<n,f,k>(r_x_m);
-        r_y_n = extend_locally<n,f,k>(r_y_m);
-        r_x_msb = get_msb<n,f,k>(r_x_n);
-        r_y_msb = get_msb<n,f,k>(r_y_n);
+        if (r_x_m == nullptr) {
+            r_x_m = new FixTensor<T, m, f, k, Rank, Options>(row, col);
+            T* val = rg.template randomGE<T>(row * col, m);
+            for (int i = 0; i < row; i++) {
+                for (int j = 0; j < col; j++) {
+                    (*r_x_m)(i, j) = Fix<T, m, f, k>(val[i * col + j]);
+                    r_x_n(i, j) = Fix<T, n, f, k>(val[i * col + j]);
+                }
+            }
+            delete[] val; // <--- 必须加上这一行！
+        }
+        else{
+            r_x_n = extend_locally<n,f,k>(*r_x_m);
+        }
+        if (r_y_m == nullptr) {
+            r_y_m = new FixTensor<T, m, f, k, Rank, Options>(row, col);
+            T* val = rg.template randomGE<T>(row * col, m);
+            for (int i = 0; i < row; i++) {
+                for (int j = 0; j < col; j++) {
+                    (*r_y_m)(i, j) = Fix<T, m, f, k>(val[i * col + j]);
+                    r_y_n(i, j) = Fix<T, n, f, k>(val[i * col + j]);
+                }
+            }
+            delete[] val; // <--- 必须加上这一行！
+        }
+        else{
+            r_y_n = extend_locally<n,f,k>(*r_y_m);
+        }
+        r_x_msb = get_msb<n,f,k>(*r_x_m);
+        r_y_msb = get_msb<n,f,k>(*r_y_m);
         r_xy = r_x_n * r_y_n;
         r_x_rymsb = r_x_n * r_y_msb;
         r_xmsb_y = r_x_msb * r_y_n;
-        secret_share_and_write_tensor(r_x_m, p0_buf, p1_buf);
-        secret_share_and_write_tensor(r_y_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(*r_x_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(*r_y_m, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_y_n, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);

@@ -78,7 +78,7 @@ FixTensor<T, new_bw, new_f, new_k, Rank, Options>
 extend_locally(const FixTensor<T, bw, f, k, Rank, Options>& input) {
     FixTensor<T, new_bw, new_f, new_k, Rank, Options> result(input.dimensions());
     for (long long i = 0; i < input.size(); ++i) {
-        result.data()[i] = input.data()[i].template change_format<new_bw, new_f, new_k>();
+        result.data()[i].val = input.data()[i].val;
     }
     return result;
 }
@@ -102,11 +102,11 @@ sum_reduce_tensor(const FixTensor<T, bw, f, k, 3, Options>& input) {
     long long dim2 = input.dimension(2);
 
     FixTensor<T, bw, f, k, 2, Options> result;
-    if constexpr (axis == 0) {
+    if (axis == 0) {
         result.resize(dim1, dim2);
-    } else if constexpr (axis == 1) {
+    } else if (axis == 1) {
         result.resize(dim0, dim2);
-    } else if constexpr (axis == 2) {
+    } else if (axis == 2) {
         result.resize(dim0, dim1);
     }
     result.setZero();
@@ -133,7 +133,6 @@ FixTensor<T, bw, f, k, 1, Options>
 sum_reduce_tensor(const FixTensor<T, bw, f, k, 2, Options>& input) {
     long long dim_rows = input.dimension(0);
     long long dim_cols = input.dimension(1);
-
     FixTensor<T, bw, f, k, 1, Options> result(dim_rows);
     result.setZero();
 

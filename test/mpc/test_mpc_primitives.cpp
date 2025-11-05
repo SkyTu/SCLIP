@@ -442,6 +442,7 @@ void test_square_tensor_opt(MPC& mpc) {
     if (mpc.party == 0) {
         for(int i=0; i<3; ++i) for(int j=0; j<4; ++j) {
             std::cout << X_square_plain(i,j).to_float<double>() << " " << X_reconstructed(i,j).to_float<double>() << std::endl;
+            assert(std::abs(X_square_plain(i,j).to_float<double>() - X_reconstructed(i,j).to_float<double>()) < 1e-1);
         }
         std::cout << "Party " << mpc.party << " Square Tensor Opt test passed!" << std::endl;
     }
@@ -653,6 +654,7 @@ void test_inv_sqrt_tensor(MPC& mpc) {
                 std::cout << "X_plain(0, " << i << ", " << j << ").to_float<double>() = " << X_plain(0, i, j).to_float<double>() << std::endl;
                 std::cout << "Ground truth: " << 1.0 / std::sqrt(X_plain(0, i, j).to_float<double>()) << std::endl;
                 std::cout << "X_inv_sqrt_reconstructed(0, " << i << ", " << j << ").to_float<double>() = " << X_inv_sqrt_reconstructed(0, i, j).to_float<double>() << std::endl;
+                assert(std::abs(1.0 / std::sqrt(X_plain(0, i, j).to_float<double>()) - X_inv_sqrt_reconstructed(0, i, j).to_float<double>()) < 1e-1);
             }
         }
     }
@@ -682,6 +684,7 @@ void test_reciprocal_tensor(MPC& mpc) {
                 std::cout << "X_plain(0, " << i << ", " << j << ").to_float<double>() = " << X_plain(0, i, j).to_float<double>() << std::endl;
                 std::cout << "X_reciprocal_reconstructed(0, " << i << ", " << j << ").to_float<double>() = " << X_reciprocal_reconstructed(0, i, j).to_float<double>() << std::endl;
                 std::cout << "Ground truth: " << 1.0 / X_plain(0, i, j).to_float<double>() << std::endl;
+                assert(std::abs(1.0 / X_plain(0, i, j).to_float<double>() - X_reciprocal_reconstructed(0, i, j).to_float<double>()) < 1e-1);
             }
         }
     }

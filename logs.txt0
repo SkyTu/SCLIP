@@ -1,0 +1,434 @@
+[Party 0] Listening for Party 1 on port 9002...
+[Party 0] <-> [Party 1] connection established.
+--- Testing L2NormParallel Layer Forward Pass for Party 0/2 ---
+L2NormParallel Layer initialized
+Loading Randomness
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 80
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+------------Read zero_extend_randomness_bwd_all---------------
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+read_fixtensor_share: bytes_needed = 800
+------------Read matmul_randomness_bwd_I---------------
+read_fixtensor_share: bytes_needed = 200
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+------------Read elementwise_mul_randomness_bwd_I---------------
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+------------Read elementwise_mul_randomness_bwd_proj_I---------------
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+------------Read elementwise_mul_randomness_bwd_d_I---------------
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+------------Read zero_extend_randomness_bwd_d_I---------------
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+read_fixtensor_share: bytes_needed = 400
+Randomness loaded
+Executing forward pass
+all_share:         0 0.0999908  0.199997  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994 0.0999908  0.199997  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1  0.199997  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1   1.09999  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1   1.09999       1.2  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1   1.09999       1.2   1.29999
+        0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006 -0.700012 -0.800003 -0.900009 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006 -0.700012 -0.800003  0.199997 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006 -0.700012  0.299988  0.199997 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006  0.399994  0.299988  0.199997 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5
+Forward pass executed
+Reconstructed Output:
+-1.52588e-05    0.0592499     0.118515     0.177765      0.23703     0.296295     0.355545      0.41481     0.474075      0.53334    0.0509796      0.10199        0.153      0.20401      0.25502      0.30603      0.35704     0.408051     0.459061     0.510071    0.0888824     0.133316     0.177765     0.222214     0.266647     0.311096      0.35553     0.399979     0.444427     0.488861     0.118225     0.157639     0.197067     0.236481     0.275894     0.315308     0.354721     0.394135     0.433548     0.472961      0.14093     0.176163     0.211395     0.246628     0.281876     0.317108     0.352341     0.387573     0.422806     0.458054
+-1.52588e-05   -0.0591583    -0.118301    -0.177444    -0.236572    -0.295715    -0.354858    -0.414017    -0.473129    -0.532288    0.0698242 -1.52588e-05     -0.06987    -0.139709    -0.209564    -0.279419    -0.349258    -0.419113    -0.488953    -0.558792     0.165894    0.0829468 -1.52588e-05   -0.0829773    -0.165939    -0.248901    -0.331863    -0.414795    -0.497757    -0.580734     0.293182     0.195465    0.0977173 -1.52588e-05   -0.0977631    -0.195511    -0.293228    -0.390976    -0.488693    -0.586441     0.431473     0.323593     0.215729     0.107849 -1.52588e-05    -0.107895    -0.215775    -0.323639    -0.431519    -0.539383
+Expected Output:
+         0  0.0592194   0.118454   0.177689   0.236923   0.296173   0.355392   0.414642   0.473862   0.533112  0.0509491   0.101913   0.152878   0.203842   0.254822   0.305771    0.35675     0.4077   0.458679   0.509644  0.0889893   0.133484   0.177994   0.222488   0.266983   0.311493   0.355988   0.400482   0.444992   0.489487   0.118118   0.157486   0.196869   0.236237    0.27562   0.314987    0.35437   0.393738   0.433121   0.472488   0.140976   0.176224   0.211456   0.246704   0.281952     0.3172   0.352448   0.387695   0.422943   0.458176
+         0 -0.0592346  -0.118469  -0.177704  -0.236938  -0.296158  -0.355408  -0.414642  -0.473862  -0.533112  0.0698242          0 -0.0698395  -0.139679  -0.209518  -0.279373  -0.349197  -0.419052  -0.488892  -0.558731   0.166077  0.0830231          0 -0.0830383  -0.166092   -0.24913  -0.332184  -0.415207   -0.49826  -0.581314   0.292755   0.195175    0.09758          0 -0.0975952   -0.19519   -0.29277  -0.390366  -0.487946  -0.585541   0.433853   0.325378   0.216919   0.108444          0  -0.108459  -0.216934  -0.325394  -0.433868  -0.542313
+L2NormParallel forward verification passed.
+
+--- Testing L2NormParallel Layer Backward Pass for Party 0/2 ---
+Executing backward pass
+all_ext_share:         0 0.0999908  0.199997  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994 0.0999908  0.199997  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1  0.199997  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1   1.09999  0.299988  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1   1.09999       1.2  0.399994       0.5  0.599991  0.699997  0.799988  0.899994         1   1.09999       1.2   1.29999
+        0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006 -0.700012 -0.800003 -0.900009 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006 -0.700012 -0.800003  0.199997 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006 -0.700012  0.299988  0.199997 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5 -0.600006  0.399994  0.299988  0.199997 0.0999908         0 -0.100006 -0.200012 -0.300003 -0.400009      -0.5
+incoming_grad_share:          0 -0.0499878 -0.0999908  -0.149994  -0.199997
+ 0.0499878          0 -0.0499878 -0.0999908  -0.149994
+ 0.0999908  0.0499878          0 -0.0499878 -0.0999908
+  0.149994  0.0999908  0.0499878          0 -0.0499878
+  0.199997   0.149994  0.0999908  0.0499878          0
+dI_m:    -0.150009    -0.199997        -0.25    -0.299988    -0.349991    -0.399994    -0.449982    -0.499985    -0.549988    -0.599976
+   -0.100006    -0.125015    -0.149994    -0.175003    -0.199997    -0.225006        -0.25    -0.274994    -0.300003    -0.324997
+  -0.0500031   -0.0500183   -0.0500031   -0.0500031   -0.0500183   -0.0500183   -0.0500031   -0.0500183   -0.0500031   -0.0500183
+-1.52588e-05    0.0249786    0.0499725    0.0749664    0.0999756     0.124985     0.149979     0.174973     0.199966     0.224976
+   0.0499878    0.0999603     0.149979     0.199966     0.249969     0.299957      0.34996     0.399963     0.449951     0.499954
+randomness.r_x_m(0, 0) = 8.31044e+08
+randomness.r_y_m(0, 0) = -5.27929e+08
+randomness.r_x_m(0, 1) = 1.71345e+09
+randomness.r_y_m(0, 1) = -1.25979e+09
+randomness.r_x_m(1, 0) = -1.17783e+09
+randomness.r_y_m(1, 0) = 1.85475e+09
+randomness.r_x_m(1, 1) = -4.87227e+07
+randomness.r_y_m(1, 1) = -1.47634e+09
+Proj_I_tr:     -8484.4    -121.406    -12073.6    -5805.69    -17320.4    -20520.1    -29175.6    -2461.48    -31770.4    -23416.4
+   -4807.11    -5281.47    -3045.23    -8741.33    -11091.8    -1726.39    -14439.6    -6125.31    -14211.7    -12797.9
+   -3062.44    -1134.11    -744.138    -2925.35    -2107.84    -2164.27    -2396.03    -1933.83    -866.359    -163.299
+-0.00572205     448.521     708.554     1182.05      5876.4      1177.9     5403.27     2252.64     10614.4     11839.4
+    1689.24     3997.97     1454.34     3220.31     2843.93     18171.2     18428.7     22891.1     13180.1       30202
+dim_rows: 5
+dim_cols: 10
+randomness.r_x_m(0, 0) = -1.43801e+09
+randomness.r_y_m(0, 0) = 4.29435e+08
+randomness.r_x_m(0, 1) = -1.71924e+09
+randomness.r_y_m(0, 1) = 1.95129e+09
+randomness.r_x_m(1, 0) = -1.22696e+08
+randomness.r_y_m(1, 0) = 3.91317e+08
+randomness.r_x_m(1, 1) = -5.77319e+07
+randomness.r_y_m(1, 1) = 1.74384e+09
+term:  2.68933e+12 -6.01314e+12  8.45605e+13  8.97686e+13  7.27336e+13  5.47765e+13 -7.93111e+13 -4.87671e+13 -9.26135e+12 -1.05136e+14
+ 2.23149e+13  5.37021e+13  -1.0946e+14  1.21716e+13 -1.75373e+13 -4.13671e+13 -2.99296e+13 -1.20092e+14  2.60692e+13  6.91652e+13
+-7.02313e+13 -2.60009e+13 -1.70654e+13 -6.70875e+13 -4.83247e+13 -4.96185e+13 -5.49484e+13 -4.43353e+13 -1.98683e+13 -3.74381e+12
+  9.6651e+11  4.64864e+13  3.67074e+13  4.08206e+13 -1.29305e+14  2.43986e+13  9.32693e+13  3.33298e+13  1.37421e+14   1.3624e+14
+-2.43992e+13  2.27847e+13  7.37682e+13   1.2251e+14  8.65496e+13 -1.02103e+14  1.19122e+14 -1.27559e+14 -5.86393e+13 -1.03395e+14
+dI_m: -4.10359e+07  9.17533e+07 -1.29029e+09 -1.36976e+09 -1.10983e+09 -8.35823e+08  1.21019e+09  7.44126e+08  1.41317e+08  1.60424e+09
+-3.40499e+08 -8.19429e+08  1.67023e+09 -1.85723e+08  2.67598e+08  6.31212e+08  4.56689e+08  1.83246e+09 -3.97785e+08 -1.05538e+09
+ 1.07165e+09  3.96742e+08  2.60398e+08  1.02367e+09  7.37377e+08  7.57118e+08  8.38446e+08  6.76502e+08  3.03167e+08   5.7126e+07
+-1.47478e+07 -7.09326e+08  -5.6011e+08 -6.22873e+08  1.97304e+09 -3.72293e+08 -1.42318e+09 -5.08573e+08 -2.09687e+09 -2.07886e+09
+ 3.72302e+08 -3.47666e+08 -1.12561e+09 -1.86936e+09 -1.32064e+09  1.55798e+09 -1.81766e+09  1.94639e+09  8.94765e+08  1.57768e+09
+50
+50
+randomness.r_x_m(0, 0) = -1.75925e+09
+randomness.r_y_m(0, 0) = -1.46102e+09
+randomness.r_x_m(0, 1) = -7.64117e+08
+randomness.r_y_m(0, 1) = -1.74862e+09
+randomness.r_x_m(1, 0) = 4.08913e+08
+randomness.r_y_m(1, 0) = -1.7685e+09
+randomness.r_x_m(1, 1) = -4.09274e+08
+randomness.r_y_m(1, 1) = -1.27879e+09
+dI_m: -2.43187e+07  5.43749e+07 -7.64653e+08 -8.11748e+08 -6.57706e+08 -4.95326e+08  7.17184e+08  4.40985e+08  8.37473e+07  9.50707e+08
+-1.73684e+08 -4.17979e+08 -1.33884e+09 -9.47349e+07  1.36498e+08  3.21972e+08  2.32951e+08 -1.25609e+09 -2.02904e+08 -5.38333e+08
+ 4.76285e+08  1.76329e+08  1.15732e+08  4.54964e+08  3.27722e+08  3.36496e+08  3.72641e+08  3.00667e+08   1.3474e+08  2.53892e+07
+-5.81283e+06 -2.79581e+08 -2.20767e+08 -2.45505e+08 -9.15188e+08 -1.46739e+08 -5.60945e+08 -2.00454e+08 -8.26482e+08  8.73478e+08
+ 1.31183e+08 -1.22502e+08 -3.96616e+08 -6.58681e+08 -4.65336e+08  5.48962e+08  8.72893e+08 -8.27534e+08  3.15276e+08  5.55905e+08
+dI: -2.43187e+07  5.43749e+07 -7.64653e+08 -8.11748e+08 -6.57706e+08 -4.95326e+08  7.17184e+08  4.40985e+08  8.37473e+07  9.50707e+08
+-1.73684e+08 -4.17979e+08 -1.33884e+09 -9.47349e+07  1.36498e+08  3.21972e+08  2.32951e+08 -1.25609e+09 -2.02904e+08 -5.38333e+08
+ 4.76285e+08  1.76329e+08  1.15732e+08  4.54964e+08  3.27722e+08  3.36496e+08  3.72641e+08  3.00667e+08   1.3474e+08  2.53892e+07
+-5.81283e+06 -2.79581e+08 -2.20767e+08 -2.45505e+08 -9.15188e+08 -1.46739e+08 -5.60945e+08 -2.00454e+08 -8.26482e+08  8.73478e+08
+ 1.31183e+08 -1.22502e+08 -3.96616e+08 -6.58681e+08 -4.65336e+08  5.48962e+08  8.72893e+08 -8.27534e+08  3.15276e+08  5.55905e+08
+Backward pass executed

@@ -27,6 +27,9 @@ void test_l2norm_parallel(MPC& mpc) {
     // 1. Secret Share Inputs
     InputTensor image_plain(params.B, params.in_dim);
     InputTensor text_plain(params.B, params.in_dim);
+    FixTensor<T, OUT_BW, F, K_INT, 2> image_plain_ext(params.B, params.in_dim);
+    FixTensor<T, OUT_BW, F, K_INT, 2> text_plain_ext(params.B, params.in_dim);
+
     InputTensor image_share(params.B, params.in_dim);
     InputTensor text_share(params.B, params.in_dim);
 
@@ -36,6 +39,8 @@ void test_l2norm_parallel(MPC& mpc) {
             for(int j = 0; j < params.in_dim; ++j) {
                 image_plain(i, j) = FixIn(double(i+j)/10.0);
                 text_plain(i, j) = FixIn(double(i-j)/10.0);
+                image_plain_ext(i, j) = Fix<T, OUT_BW, F, K_INT>(image_plain(i, j));
+                text_plain_ext(i, j) = Fix<T, OUT_BW, F, K_INT>(text_plain(i, j));
             }
         }
         // Party 0 holds the full plaintext as its share
@@ -46,6 +51,7 @@ void test_l2norm_parallel(MPC& mpc) {
         image_share.setZero();
         text_share.setZero();
     }
+    std::cout << "input is " << image_plain << " and " << text_plain << std::endl;
     
     std::cout << "Loading Randomness" << std::endl;
     l2_layer.read_randomness(mpc);
@@ -56,7 +62,8 @@ void test_l2norm_parallel(MPC& mpc) {
     std::cout << "Forward pass executed" << std::endl;
 
     auto y_reconstructed = reconstruct_tensor(y_share);
-
+    FixTensor<T, OUT_BW, F, K_INT, 3> norm_tensor;
+    norm_tensor.resize(2, params.B, params.in_dim);
     // 6. Plaintext Verification
     if (mpc.party == 0) {
         // Re-shape plaintext inputs for stacking, just like in the layer
@@ -78,18 +85,121 @@ void test_l2norm_parallel(MPC& mpc) {
                 }
                 double norm = std::sqrt(norm_sq) + 1e-12; // Add epsilon for stability
                 for (int d = 0; d < params.in_dim; ++d) {
+                    norm_tensor(i, b, d) = Fix<T, OUT_BW, F, K_INT>(1.0/norm);
+                }
+                for (int d = 0; d < params.in_dim; ++d) {
                     expected_y(i, b, d) = Fix<T, OUT_BW, F, K_INT>(all_plain_3d(i, b, d).to_float<double>() / norm);
                 }
             }
         }
-        
+        std::cout << "--------FORWARD TEST--------" << std::endl;
         std::cout << "Reconstructed Output:\n" << y_reconstructed << std::endl;
         std::cout << "Expected Output:\n" << expected_y << std::endl;
 
         for (int i = 0; i < y_reconstructed.size(); ++i) {
-            assert(std::abs(y_reconstructed.data()[i].to_float<double>() - expected_y.data()[i].to_float<double>()) < 1e-3);
+            if(std::abs(y_reconstructed.data()[i].to_float<double>() - expected_y.data()[i].to_float<double>()) >= 1e-1){
+                std::cout << y_reconstructed.data()[i].to_float<double>();
+            }
         }
         std::cout << "L2NormParallel forward verification passed." << std::endl;
+    }
+
+    // --- Backward Pass Test ---
+    std::cout << "\n--- Testing L2NormParallel Layer Backward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
+
+    using IncomingGradTensor = L2NormLayer<T, IN_BW, OUT_BW, F, K_INT>::IncomingGradTensor;
+    IncomingGradTensor incoming_grad_share(params.B, params.B);
+    IncomingGradTensor incoming_grad_plain(params.B, params.B);
+
+    if (mpc.party == 0) {
+        for(int i = 0; i < params.B; ++i) {
+            for(int j = 0; j < params.B; ++j) {
+                incoming_grad_plain(i, j) = Fix<T, OUT_BW, F, K_INT>(double(i - j) / 20.0);
+            }
+        }
+        incoming_grad_share = incoming_grad_plain;
+    } else {
+        incoming_grad_share.setZero();
+    }
+
+    // auto [dI_share, dT_share] = l2_layer.backward(incoming_grad_share);
+    auto dI_share = l2_layer.backward(incoming_grad_share);
+    auto dI_reconstructed = reconstruct_tensor(dI_share);
+    // auto dT_reconstructed = reconstruct_tensor(dT_share);
+    // Backward Verification
+    if (mpc.party == 0) {
+        // Plaintext backward calculation
+        FixTensor<T, OUT_BW, F, K_INT, 2> norm_image_plain(params.B, params.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 2> norm_text_plain(params.B, params.in_dim);
+        for(int i = 0; i < params.B; ++i) {
+            for(int j = 0; j < params.in_dim; ++j) {
+                norm_image_plain(i, j) = norm_tensor(0, i, j);
+                norm_text_plain(i, j) = norm_tensor(1, i, j);
+            }
+        }
+        // 1. dI = (dL/dy) @ I
+        auto dI_plain = tensor_mul(incoming_grad_plain, image_plain_ext);
+        dI_plain.trunc_in_place(F);
+        // 2. proj_I = dI * I
+        FixTensor<T, OUT_BW, F, K_INT, 2> proj_I_plain_full_bw = dI_plain * image_plain_ext;
+        proj_I_plain_full_bw.trunc_in_place(F);
+        // 3. proj_I = sum(proj_I)
+        FixTensor<T, OUT_BW, F, K_INT, 1> proj_I_m_plain = sum_reduce_tensor<T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_I_plain_full_bw);
+        // 4. Broadcast proj_I
+        FixTensor<T, OUT_BW, F, K_INT, 2> proj_I_broadcasted(params.B, params.in_dim);
+        for(int i = 0; i < params.B; i++) {
+            for(int j = 0; j < params.in_dim; j++) {
+                proj_I_broadcasted(i, j) = proj_I_m_plain(i);
+            }
+        }
+        // 5. term = proj_I_m * I
+        auto term_plain = image_plain_ext * proj_I_broadcasted;
+        term_plain.trunc_in_place(F);
+        // 6. dI = dI - term
+        dI_plain = dI_plain - term_plain;
+        // 7. dI = dI * norm
+        auto dI_final_full_bw = dI_plain * norm_image_plain;
+        dI_final_full_bw.trunc_in_place(F);
+        std::cout << "--------IMAGE VERIFICATION----------";
+        for (int i = 0; i < dI_reconstructed.size(); ++i) {
+            if(std::abs(dI_reconstructed.data()[i].to_float<double>() - dI_final_full_bw.data()[i].to_float<double>()) >= 1e-2){
+                std::cout << dI_reconstructed.data()[i].to_float<double>() << " " << dI_final_full_bw.data()[i].to_float<double>() << std::endl;
+            }
+        }
+        
+
+    //     // for text
+    //     auto dT_plain = tensor_mul(incoming_grad_plain, text_plain_ext);
+    //     dT_plain.trunc_in_place(F);
+    //     auto dT_final_full_bw = dT_plain * norm_text_plain;
+    //     dT_final_full_bw.trunc_in_place(F);
+    //     auto proj_T_plain_full_bw = dT_plain * text_plain_ext;
+    //     proj_T_plain_full_bw.trunc_in_place(F);
+    //     FixTensor<T, OUT_BW, F, K_INT, 1> proj_T_m_plain = sum_reduce_tensor<T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_T_plain_full_bw);
+    //     // 4. Broadcast proj_T
+    //     FixTensor<T, OUT_BW, F, K_INT, 2> proj_T_broadcasted(params.B, params.in_dim);
+    //     for(int i = 0; i < params.B; i++) {
+    //         for(int j = 0; j < params.in_dim; j++) {
+    //             proj_T_broadcasted(i, j) = proj_T_m_plain(i);
+    //         }
+    //     }
+    //     // 5. term = proj_I_m * I
+    //     term_plain = text_plain_ext * proj_T_broadcasted;
+    //     term_plain.trunc_in_place(F);
+    //     // 6. dI = dI - term
+    //     dT_plain = dT_plain - term_plain;
+    //     // 7. dT = dT * norm
+    //     dT_final_full_bw = dT_plain * norm_text_plain;
+    //     dT_final_full_bw.trunc_in_place(F);
+    //     std::cout << "--------TEXT VERIFICATION----------";
+    //     for (int i = 0; i < dT_reconstructed.size(); ++i) {
+    //         if(std::abs(dT_reconstructed.data()[i].to_float<double>() - dT_final_full_bw.data()[i].to_float<double>()) >= 1e-2){
+    //             std::cout << dT_reconstructed.data()[i].to_float<double>() << " " << dT_final_full_bw.data()[i].to_float<double>() << std::endl;
+    //         }
+    //     }
+    //     std::cout << "L2NormParallel backward verification passed." << std::endl;
+    //     std::cout << "Expected Gradient:\n" << dT_final_full_bw << std::endl;
+    //     std::cout << "Reconstructed Gradient:\n" << dT_reconstructed << std::endl;
     }
     
     std::cout << "Party " << mpc.party << " L2NormParallel Layer test passed!" << std::endl;

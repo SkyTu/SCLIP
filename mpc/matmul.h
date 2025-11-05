@@ -55,25 +55,41 @@ int get_matmul_random_size(int m, int n, int q, int B = -1){
 }
 
 template <typename T, int bw, int f, int k, int RankU, int RankV, int RankZ>
-void generate_matmul_randomness(Buffer& p0_buf, Buffer& p1_buf, int B, int m, int n, int q){
-    FixTensor<T, bw, f, k, RankU> U;
-    FixTensor<T, bw, f, k, RankV> V;
+void generate_matmul_randomness(Buffer& p0_buf, Buffer& p1_buf, int B, int m, int n, int q, FixTensor<T, bw, f, k, RankU>* U = nullptr, FixTensor<T, bw, f, k, RankV>* V = nullptr){
+    FixTensor<T, bw, f, k, RankU> U_tmp;
+    FixTensor<T, bw, f, k, RankV> V_tmp;
     FixTensor<T, bw, f, k, RankZ> Z;
+    
+
+    if(U == nullptr){
+        if constexpr (RankU == 3) {
+            U_tmp.resize(B,m,n);
+        }
+        else{
+            U_tmp.resize(m,n);
+        }
+        U_tmp.setRandom();
+    }
+    else{
+        U_tmp = *U;
+    }
+    if(V == nullptr){
+        V_tmp.resize(n,q);
+        V_tmp.setRandom();
+    }
+    else{
+        V_tmp = *V;
+    }
     if constexpr (RankU == 3) {
         assert(B != -1);
-        U.resize(B, m, n);
-        V.resize(n, q);
         Z.resize(B, m, q);
     } else {
-        U.resize(m, n);
-        V.resize(n, q);
         Z.resize(m, q);
     }
-    U.setRandom();
-    V.setRandom();
-    Z = tensor_mul(U, V);
-    secret_share_and_write_tensor(U, p0_buf, p1_buf);
-    secret_share_and_write_tensor(V, p0_buf, p1_buf);
+    
+    Z = tensor_mul(U_tmp, V_tmp);
+    secret_share_and_write_tensor(U_tmp, p0_buf, p1_buf);
+    secret_share_and_write_tensor(V_tmp, p0_buf, p1_buf);
     secret_share_and_write_tensor(Z, p0_buf, p1_buf);
 }
 

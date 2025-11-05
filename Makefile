@@ -2,7 +2,7 @@ CXX=g++
 CXXFLAGS=-std=c++17 -pthread -I./utils -I./mpc -I./ -I/usr/include/eigen3
 LDFLAGS=-pthread
 
-.PHONY: all clean test-fc test-primitives test-fc-new test-secure-matmul test-l2norm-parallel-new test-fixtensor-ops
+.PHONY: all clean test-fc test-primitives test-fc-new test-secure-matmul test-l2norm-parallel-new test-fixtensor-ops test-sum-reduce
 
 all: test/dealer test/mpc/test_mpc_primitives test/dealer_fc test/nn/test_fc test/dealer_l2norm_parallel test/nn/test_l2norm_parallel
 
@@ -41,6 +41,10 @@ test-primitives: test/dealer test/mpc/test_mpc_primitives
 	@./test/mpc/test_mpc_primitives 0 & ./test/mpc/test_mpc_primitives 1
 	@wait
 
+test-sum-reduce: test/mpc/test_sum_reduce
+	@echo "--- Running Isolated Test for sum_reduce_tensor ---"
+	@./test/mpc/test_sum_reduce
+
 test/nn/test_fc: test/nn/test_fc.o mpc/mpc.o utils/comm.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 	
@@ -78,6 +82,9 @@ test/mpc/test_secure_matmul: test/mpc/test_secure_matmul.o mpc/mpc.o utils/comm.
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 test/mpc/test_fixtensor_ops: test/mpc/test_fixtensor_ops.o
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+test/mpc/test_sum_reduce: test/mpc/test_sum_reduce.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 mpc/mpc.o: mpc/mpc.cpp mpc/mpc.h
