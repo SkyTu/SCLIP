@@ -2,7 +2,7 @@ CXX=g++
 CXXFLAGS=-std=c++17 -pthread -I./utils -I./mpc -I./ -I/usr/include/eigen3
 LDFLAGS=-pthread
 
-.PHONY: all clean test-fc test-primitives test-fc-new test-secure-matmul test-l2norm-parallel-new test-fixtensor-ops test-sum-reduce
+.PHONY: all clean test-fc test-primitives test-fc-new test-secure-matmul test-fixtensor-ops test-sum-reduce
 
 all: test/dealer test/mpc/test_mpc_primitives test/dealer_fc test/nn/test_fc test/dealer_cosinesim test/nn/test_cossim
 
@@ -25,13 +25,6 @@ test-cosinesim-new: test/dealer_cosinesim test/nn/test_cossim
 	@./test/dealer_cosinesim
 	@sleep 1
 	@./test/nn/test_cossim 0 & ./test/nn/test_cossim 1
-	@wait
-
-test-l2norm-parallel-new: test/dealer_l2norm_parallel test/nn/test_l2norm_parallel
-	@mkdir -p randomness/P0 randomness/P1
-	@./test/dealer_l2norm_parallel
-	@sleep 1
-	@./test/nn/test_l2norm_parallel 0 & ./test/nn/test_l2norm_parallel 1
 	@wait
 
 test-fixtensor-ops: test/mpc/test_fixtensor_ops
@@ -58,16 +51,10 @@ test/nn/test_fc: test/nn/test_fc.o mpc/mpc.o utils/comm.o
 test/nn/test_cossim: test/nn/test_cossim.o mpc/mpc.o utils/comm.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 	
-test/nn/test_l2norm_parallel: test/nn/test_l2norm_parallel.o mpc/mpc.o utils/comm.o
-	$(CXX) $(LDFLAGS) -o $@ $^
-	
 test/dealer_fc: test/dealer_fc.o mpc/mpc.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 test/dealer_cosinesim: test/dealer_cosinesim.o mpc/mpc.o
-	$(CXX) $(LDFLAGS) -o $@ $^
-
-test/dealer_l2norm_parallel: test/dealer_l2norm_parallel.o mpc/mpc.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 test/dealer_matmul: test/dealer_matmul.o mpc/mpc.o utils/comm.o
@@ -79,16 +66,10 @@ test/nn/test_fc.o: test/nn/test_fc.cpp
 test/nn/test_cossim.o: test/nn/test_cossim.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-test/nn/test_l2norm_parallel.o: test/nn/test_l2norm_parallel.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
 test/dealer_fc.o: test/dealer_fc.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test/dealer_cosinesim.o: test/dealer_cosinesim.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-test/dealer_l2norm_parallel.o: test/dealer_l2norm_parallel.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test/dealer_matmul.o: test/dealer_matmul.cpp

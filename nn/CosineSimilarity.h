@@ -22,7 +22,8 @@ struct CosSimRandomness {
     InvSqrtRandomness<T, BW, smallBW, F, K_INT, 2> inv_sqrt_randomness;
     ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 3> elementwise_mul_randomness;
     ZeroExtendRandomness<T, BW, smallBW, F, K_INT, 3> zero_extend_randomness_elemul;
-    ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 2> elementwise_mul_randomness_cosine;
+
+    MatmulRandomness<T, BW, F, K_INT, 2, 2, 2> matmul_randomness_cosine;
     ZeroExtendRandomness<T, BW, smallBW, F, K_INT, 2> zero_extend_randomness_cosine;
 
     ZeroExtendRandomness<T, BW, smallBW, F, K_INT, 3> zero_extend_randomness_bwd_all;
@@ -32,12 +33,6 @@ struct CosSimRandomness {
     ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 3> elementwise_mul_randomness_bwd_proj;
     ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 3> elementwise_mul_randomness_bwd_d;
     ZeroExtendRandomness<T, BW, smallBW, F, K_INT, 3> zero_extend_randomness_bwd_d;
-
-    
-    // ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 2> elementwise_mul_randomness_bwd_T;
-    // ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 2> elementwise_mul_randomness_bwd_proj_T;
-    // ElementwiseMulRandomness<T, BW, smallBW, F, K_INT, 2> elementwise_mul_randomness_bwd_d_T;
-    // ZeroExtendRandomness<T, BW, smallBW, F, K_INT, 2> zero_extend_randomness_bwd_d_T;
 };
 
 // IN_BW: n-f
@@ -46,7 +41,7 @@ template <typename T, int IN_BW, int OUT_BW, int F, int K_INT>
 class CosSimLayer {
 public:
     using InputTensor = FixTensor<T, IN_BW, F, K_INT, 2>;
-    using OutputTensor = FixTensor<T, OUT_BW, F, K_INT, 3>;
+    using OutputTensor = FixTensor<T, OUT_BW, F, K_INT, 2>;
     using IncomingGradTensor = FixTensor<T, OUT_BW, F, K_INT, 2>;
     using OutgoingGradTensor = FixTensor<T, OUT_BW, F, K_INT, 2>;
     // For the norm, which is a vector of scalars (one for each item in batch)
@@ -86,15 +81,15 @@ public:
         total_size += get_inv_sqrt_random_size<T, 2>(-1, 2, p.B);
         total_size += get_elementwise_mul_random_size<T, 3>(2, p.B, p.in_dim);
         total_size += get_zero_extend_random_size<T, 3>(2, p.B, p.in_dim);
+        total_size += get_matmul_random_size<T, OUT_BW, F, K_INT, 2, 2, 2>(p.B, p.in_dim, p.B, -1);
+        total_size += get_zero_extend_random_size<T, 2>(-1, p.B, p.B);
+        
+        // backward
 
-        // total_size += get_elementwise_mul_random_size<T, 2>(-1, p.B, p.in_dim);
-        // total_size += get_zero_extend_random_size<T, 2>(2, p.B, p.in_dim);
-        // backward for image
+        total_size += get_zero_extend_random_size<T, 3>(2, p.B, p.in_dim);
         total_size += get_matmul_random_size<T, OUT_BW, F, K_INT, 2, 2, 2>(p.B, p.B, p.in_dim, -1);
         total_size += get_matmul_random_size<T, OUT_BW, F, K_INT, 2, 2, 2>(p.B, p.B, p.in_dim, -1);
         total_size += get_elementwise_mul_random_size<T, 3>(2, p.B, p.in_dim);
-        // total_size += get_zero_extend_random_size<T, 2>(-1, p.B, p.in_dim);
-        // std::cout << "size zero_extend_randomness_bwd_d_I: " << total_size - start_size << std::endl;
         total_size += get_elementwise_mul_random_size<T, 3>(2, p.B, p.in_dim);
         total_size += get_elementwise_mul_random_size<T, 3>(2, p.B, p.in_dim);
         total_size += get_zero_extend_random_size<T, 3>(2, p.B, p.in_dim);
@@ -107,43 +102,50 @@ public:
         randomness.inv_sqrt_randomness = read_inv_sqrt_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, -1, 2, p.B);
         randomness.elementwise_mul_randomness = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
         randomness.zero_extend_randomness_elemul = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
-        randomness.elementwise_mul_randomness_cosine = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, 2, p.B, p.in_dim);
-        randomness.zero_extend_randomness_cosine = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, 2, p.B, p.in_dim);
-
-        randomness.zero_extend_randomness_bwd_all = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
+        randomness.matmul_randomness_cosine = read_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(mpc, -1, p.B, p.in_dim, p.B);
+        randomness.zero_extend_randomness_cosine = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, 2, p.B, p.B);
         // backward for image
+        randomness.zero_extend_randomness_bwd_all = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
         randomness.matmul_randomness_bwd_I = read_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(mpc, -1, p.B, p.B, p.in_dim);
         randomness.matmul_randomness_bwd_T = read_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(mpc, -1, p.B, p.B, p.in_dim);
         randomness.elementwise_mul_randomness_bwd = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
         randomness.elementwise_mul_randomness_bwd_proj = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
         randomness.elementwise_mul_randomness_bwd_d = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
         randomness.zero_extend_randomness_bwd_d = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(mpc, 2, p.B, p.in_dim);
-        // // backward for text
-        // randomness.matmul_randomness_bwd_T = read_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(mpc, -1, p.B, p.B, p.in_dim);
-        // randomness.elementwise_mul_randomness_bwd_T = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, -1, p.B, p.in_dim);
-        // randomness.elementwise_mul_randomness_bwd_proj_T = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, -1, p.B, p.in_dim);
-        // randomness.elementwise_mul_randomness_bwd_d_T = read_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, -1, p.B, p.in_dim);
-        // randomness.zero_extend_randomness_bwd_d_T = read_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(mpc, -1, p.B, p.in_dim);
     }
     
     
     void generate_randomness(Buffer& p0_buf, Buffer& p1_buf) {
-        generate_square_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(p0_buf, p1_buf, 2, p.B, p.in_dim);
-        
-        generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, -1, 2, p.B);
-        generate_inv_sqrt_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, -1, 2, p.B);
-        FixTensor<T, IN_BW, F, K_INT, 3> r_x_m(2, p.B, p.in_dim);
-        FixTensor<T, IN_BW, F, K_INT, 3> r_y_m(2, p.B, p.in_dim);
+        // generate_square_randomness<T, IN_BW, F, K_INT, 2>(p0_buf, p1_buf);
+        FixTensor<T, IN_BW, F, K_INT, 3> R(2, p.B, p.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 3> R_N(2, p.B, p.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 3> R_SQUARE(2, p.B, p.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 3> R_MSB(2, p.B, p.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 3> R_R_MSB(2, p.B, p.in_dim);
         Random rg;
         T* val = rg.template randomGE<T>(2 * p.B * p.in_dim, IN_BW);
         for(int i = 0; i < 2; i++) {
             for(int j = 0; j < p.B; j++) {
                 for(int k = 0; k < p.in_dim; k++) {
-                    r_x_m(i, j, k) = Fix<T, IN_BW, F, K_INT>(val[i * p.in_dim * p.B + j * p.in_dim + k]);
+                    R(i, j, k) = Fix<T, IN_BW, F, K_INT>(val[i * p.in_dim * p.B + j * p.in_dim + k]);
+                    R_N(i, j, k) = Fix<T, OUT_BW, F, K_INT>(val[i * p.in_dim * p.B + j * p.in_dim + k]);
                 }
             }
         }
         delete[] val;
+        R_SQUARE = R_N * R_N;
+        R_MSB = get_msb<OUT_BW, F, K_INT>(R);
+        R_R_MSB = R_N * R_MSB;
+        secret_share_and_write_tensor(R, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_N, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
+        
+        generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, -1, 2, p.B);
+        generate_inv_sqrt_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, -1, 2, p.B);
+        FixTensor<T, IN_BW, F, K_INT, 3> r_x_m(2, p.B, p.in_dim), r_y_m(2, p.B, p.in_dim);
+        r_x_m = R;
         val = rg.template randomGE<T>(2 * p.B, IN_BW);
         for(int i = 0; i < 2; i++) {
             for(int j = 0; j < p.B; j++) {
@@ -155,20 +157,22 @@ public:
         delete[] val;
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3, Eigen::RowMajor>(p0_buf, p1_buf, 2, p.B, p.in_dim, &r_x_m, &r_y_m);
         generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(p0_buf, p1_buf, 2, p.B, p.in_dim);
-        // generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, 2, p.B, p.in_dim, nullptr, &r_y_m);
-        // generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, 2, p.B, p.in_dim);
+        generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.in_dim, p.B);
+        generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, -1, p.B, p.B);
 
-        FixTensor<T, IN_BW, F, K_INT, 3> R(2, p.B, p.in_dim);
-        val = rg.template randomGE<T>(2 * p.B * p.in_dim, IN_BW);
-        for(int i = 0; i < 2; i++) {
-            for(int j = 0; j < p.B; j++) {
-                for(int k = 0; k < p.in_dim; k++) {
-                    R(i, j, k) = Fix<T, IN_BW, F, K_INT>(val[i * p.in_dim * p.B + j * p.in_dim + k]);
-                }
+        // backward randomness
+        FixTensor<T, IN_BW, F, K_INT, 2> R_I(p.B, p.in_dim);
+        FixTensor<T, IN_BW, F, K_INT, 2> R_T(p.B, p.in_dim);
+        FixTensor<T, IN_BW, F, K_INT, 2> R_Norm_I(p.B, p.in_dim);
+        FixTensor<T, IN_BW, F, K_INT, 2> R_Norm_T(p.B, p.in_dim);
+        for(int i = 0; i < p.B; i++) {
+            for(int j = 0; j < p.in_dim; j++) {
+                R_I(i, j) = R(0, i, j);
+                R_T(i, j) = R(1, i, j);
+                R_Norm_I(i, j) = r_y_m(0, i, j);
+                R_Norm_T(i, j) = r_y_m(1, i, j);
             }
         }
-        delete[] val;
-
         generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(p0_buf, p1_buf, 2, p.B, p.in_dim, &R);
         FixTensor<T, OUT_BW, F, K_INT, 2> U_I(p.B, p.B);
         val = rg.template randomGE<T>(p.B * p.B, OUT_BW);
@@ -181,27 +185,15 @@ public:
         // U_I.setRandom();
         // std::cout << "U_I is " << U_I << std::endl;
         generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim, &U_I);
-        // for text
         FixTensor<T, OUT_BW, F, K_INT, 2> U_I_T(p.B, p.B);
         U_I_T = U_I.shuffle(Eigen::array<int, 2>{1, 0});
         generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim, &U_I_T);
-        // generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim);
-
+        
 
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3, Eigen::RowMajor>(p0_buf, p1_buf, 2, p.B, p.in_dim, nullptr, &R);
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3, Eigen::RowMajor>(p0_buf, p1_buf, 2, p.B, p.in_dim, &R, nullptr);
         generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 3, Eigen::RowMajor>(p0_buf, p1_buf, 2, p.B, p.in_dim, nullptr, &r_y_m);
-        generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(p0_buf, p1_buf, 2, p.B, p.in_dim);    
-        
-        // FixTensor<T, OUT_BW, F, K_INT, 2> U_T(p.B, p.B);
-        // U_T = U_I.shuffle(Eigen::array<int, 2>{1, 0});
-        // std::cout << "U_T: " << U_T << std::endl;
-        // generate_matmul_randomness<T, OUT_BW, F, K_INT, 2, 2, 2>(p0_buf, p1_buf, -1, p.B, p.B, p.in_dim, &U_T);
-        // generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.in_dim, nullptr, &R_T);
-        // generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.in_dim, &R_T, nullptr);
-        // generate_elementwise_mul_randomness<T, OUT_BW, IN_BW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.in_dim, nullptr, &R_Norm_T);
-        // generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 2>(p0_buf, p1_buf, -1, p.B, p.in_dim);    
-        
+        generate_zero_extend_randomness<T, OUT_BW, IN_BW, F, K_INT, 3>(p0_buf, p1_buf, 2, p.B, p.in_dim); 
     }
 
     OutputTensor forward(const InputTensor& image_share, const InputTensor& text_share) {
@@ -270,11 +262,22 @@ public:
                 }
             }
         }
-
+        
         FixTensor<T, OUT_BW, F, K_INT, 3> y = elementwise_mul_opt<T, OUT_BW, IN_BW, F, K_INT, 3>(this->all_rec, norm_broadcasted, randomness.elementwise_mul_randomness, true, true);
         FixTensor<T, IN_BW, F, K_INT, 3> y_m = truncate_reduce_tensor(y);
         y = zero_extend_tensor<T, OUT_BW, IN_BW, F, K_INT, 3>(y_m, randomness.zero_extend_randomness_elemul);
-        return y;
+        FixTensor<T, OUT_BW, F, K_INT, 2> y_I(p.B, p.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 2> y_T_T(p.in_dim, p.B);
+        for (int i = 0; i < p.B; i++) {
+            for (int j = 0; j < p.in_dim; j++) {
+                y_I(i, j) = y(0, i, j);
+                y_T_T(j, i) = y(1, i, j);
+            }
+        }
+        FixTensor<T, OUT_BW, F, K_INT, 2> similarity = secure_matmul(y_I, y_T_T, randomness.matmul_randomness_cosine);
+        FixTensor<T, IN_BW, F, K_INT, 2> similarity_m = truncate_reduce_tensor(similarity);
+        similarity = zero_extend_tensor<T, OUT_BW, IN_BW, F, K_INT, 2>(similarity_m, randomness.zero_extend_randomness_cosine);
+        return similarity;
     }
 
     std::pair<FixTensor<T, OUT_BW, F, K_INT, 2>, FixTensor<T, OUT_BW, F, K_INT, 2>> backward(const IncomingGradTensor& incoming_grad_share) {

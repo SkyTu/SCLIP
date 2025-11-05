@@ -7,7 +7,7 @@
 #include <fstream>
 #include <cmath>
 
-void test_cosinesim(MPC& mpc) {
+void test_cossim(MPC& mpc) {
     std::cout << "--- Testing CosineSimilarity Layer Forward Pass for Party " << mpc.party << "/" << mpc.M << " ---" << std::endl;
 
     using T = uint64_t;
@@ -92,12 +92,22 @@ void test_cosinesim(MPC& mpc) {
                 }
             }
         }
+        FixTensor<T, OUT_BW, F, K_INT, 2> y_I(params.B, params.in_dim);
+        FixTensor<T, OUT_BW, F, K_INT, 2> y_T_T(params.in_dim, params.B);
+        for (int i = 0; i < params.B; i++) {
+            for (int j = 0; j < params.in_dim; j++) {
+                y_I(i, j) = expected_y(0, i, j);
+                y_T_T(j, i) = expected_y(1, i, j);
+            }
+        }
+        FixTensor<T, OUT_BW, F, K_INT, 2> res = tensor_mul(y_I, y_T_T);
+        res.trunc_in_place(F);
         std::cout << "--------FORWARD TEST--------" << std::endl;
         std::cout << "Reconstructed Output:\n" << y_reconstructed << std::endl;
-        std::cout << "Expected Output:\n" << expected_y << std::endl;
+        std::cout << "Expected Output:\n" << res << std::endl;
 
         for (int i = 0; i < y_reconstructed.size(); ++i) {
-            if(std::abs(y_reconstructed.data()[i].to_float<double>() - expected_y.data()[i].to_float<double>()) >= 1e-1){
+            if(std::abs(y_reconstructed.data()[i].to_float<double>() - res.data()[i].to_float<double>()) >= 1e-1){
                 std::cout << y_reconstructed.data()[i].to_float<double>();
             }
         }
@@ -214,7 +224,7 @@ void test_cosinesim(MPC& mpc) {
         std::cout << "Reconstructed Gradient:\n" << dT_reconstructed << std::endl;
     }
     
-    std::cout << "Party " << mpc.party << " L2NormParallel Layer test passed!" << std::endl;
+    std::cout << "Party " << mpc.party << " CosineSimilarity Layer test passed!" << std::endl;
 }
 
 bool file_exists(const std::string& path) {
@@ -230,7 +240,7 @@ int main(int argc, char** argv) {
     int party = std::atoi(argv[1]);
     MPC mpc(2, party);
     
-    std::string randomness_path = "./randomness/P" + std::to_string(party) + "/l2norm_parallel_randomness.bin";
+    std::string randomness_path = "./randomness/P" + std::to_string(party) + "/cosinesim_randomness.bin";
     if (!file_exists(randomness_path)) {
         std::cerr << "Randomness file not found: " << randomness_path << std::endl;
         return 1;
@@ -240,7 +250,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> addrs = {"127.0.0.1", "127.0.0.1"};
     mpc.connect(addrs, 9001);
 
-    test_cosinesim(mpc);
+    test_cossim(mpc);
 
     return 0;
 }
