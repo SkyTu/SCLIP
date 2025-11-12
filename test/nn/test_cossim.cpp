@@ -51,9 +51,6 @@ void test_cossim(MPC& mpc) {
         image_share.setZero();
         text_share.setZero();
     }
-    std::cout << "input is " << image_plain << " and " << text_plain << std::endl;
-    
-    std::cout << "Loading Randomness" << std::endl;
     cosinesim_layer.read_randomness(mpc);
     std::cout << "Randomness loaded" << std::endl;
 
@@ -132,9 +129,7 @@ void test_cossim(MPC& mpc) {
     } else {
         incoming_grad_share.setZero();
     }
-    std::cout << "incoming_grad_plain: " << incoming_grad_plain << std::endl;
     incoming_grad_plain_T = incoming_grad_plain.shuffle(Eigen::array<int, 2>{1, 0});
-    std::cout << "incoming_grad_plain_T: " << incoming_grad_plain_T << std::endl;
     auto [dI_share, dT_share] = cosinesim_layer.backward(incoming_grad_share);
     // auto dI_share = l2_layer.backward(incoming_grad_share);
     auto dI_reconstructed = reconstruct_tensor(dI_share);
@@ -179,20 +174,12 @@ void test_cossim(MPC& mpc) {
                 std::cout << dI_reconstructed.data()[i].to_float<double>() << " " << dI_final_full_bw.data()[i].to_float<double>() << std::endl;
             }
         }
-        std::cout << "dI_reconstructed: " << dI_reconstructed << std::endl;
-        std::cout << "dI_final_full_bw: " << dI_final_full_bw << std::endl;
-        
-        // for text
-        std::cout << "text plain ext " << text_plain_ext << std::endl;
         FixTensor<T, OUT_BW, F, K_INT, 2> dT_plain = tensor_mul(incoming_grad_plain_T, text_plain_ext);
         dT_plain.trunc_in_place(F);
-        std::cout << "dT_plain: " << dT_plain << std::endl;
         auto dT_final_full_bw = dT_plain * norm_text_plain;
         dT_final_full_bw.trunc_in_place(F);
-        std::cout << "dT_final_full_bw: " << dT_final_full_bw << std::endl;
         auto proj_T_plain_full_bw = dT_plain * text_plain_ext;
         proj_T_plain_full_bw.trunc_in_place(F);
-        std::cout << "proj_T_plain_full_bw: " << proj_T_plain_full_bw << std::endl;
         FixTensor<T, OUT_BW, F, K_INT, 1> proj_T_m_plain = sum_reduce_tensor<T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_T_plain_full_bw);
         
         // 4. Broadcast proj_T
@@ -205,14 +192,11 @@ void test_cossim(MPC& mpc) {
         // 5. term = proj_I_m * I
         term_plain = text_plain_ext * proj_T_broadcasted;
         term_plain.trunc_in_place(F);
-        std::cout << "term_plain: " << term_plain << std::endl;
         // 6. dI = dI - term
         dT_plain = dT_plain - term_plain;
-        std::cout << "dT_plain: " << dT_plain << std::endl;
         // 7. dT = dT * norm
         dT_final_full_bw = dT_plain * norm_text_plain;
         dT_final_full_bw.trunc_in_place(F);
-        std::cout << "dT_final_full_bw: " << dT_final_full_bw << std::endl;
         std::cout << "--------TEXT VERIFICATION----------";
         for (int i = 0; i < dT_reconstructed.size(); ++i) {
             if(std::abs(dT_reconstructed.data()[i].to_float<double>() - dT_final_full_bw.data()[i].to_float<double>()) >= 1e-2){

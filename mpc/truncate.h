@@ -14,6 +14,22 @@ struct ZeroExtendRandomness{
     FixTensor<T, BW, F, K, Rank> R_MSB;
 };
 
+template <typename T, int BW, int smallBW, int F, int K>
+struct ZeroExtendScalarRandomness{
+    Fix<T, smallBW, F, K> R;
+    Fix<T, BW, F, K> R_E;
+    Fix<T, BW, F, K> R_MSB;
+};
+
+template <typename T, int BW, int smallBW, int F, int K>
+ZeroExtendScalarRandomness<T, BW, smallBW, F, K> read_zero_extend_scalar_randomness(MPC& mpc){
+    ZeroExtendScalarRandomness<T, BW, smallBW, F, K> randomness;
+    mpc.read_fix_share(randomness.R);
+    mpc.read_fix_share(randomness.R_E);
+    mpc.read_fix_share(randomness.R_MSB);
+    return randomness;
+}
+
 template <typename T, int BW, int smallBW, int F, int K, int Rank>
 ZeroExtendRandomness<T, BW, smallBW, F, K, Rank> read_zero_extend_randomness(MPC& mpc, int batch, int row, int col){
     ZeroExtendRandomness<T, BW, smallBW, F, K, Rank> randomness;
@@ -28,9 +44,9 @@ ZeroExtendRandomness<T, BW, smallBW, F, K, Rank> read_zero_extend_randomness(MPC
         randomness.R_MSB.resize(row, col);
     }
     else if constexpr(Rank == 1){
-        randomness.R_M.resize(row);
-        randomness.R_E.resize(row);
-        randomness.R_MSB.resize(row);
+        randomness.R_M.resize(col);
+        randomness.R_E.resize(col);
+        randomness.R_MSB.resize(col);
     }
     else{
         throw std::runtime_error("Invalid rank for zero extend randomness");
@@ -53,7 +69,7 @@ int get_zero_extend_random_size(int batch, int row, int col){
     }else if (Rank == 2){
         return (row * col + row * col + row * col) * sizeof(T);
     }else if (Rank == 1){
-        return (row + row + row) * sizeof(T);
+        return (col + col + col) * sizeof(T);
     }
     else{
         throw std::runtime_error("Invalid rank for zero extend randomness");
@@ -111,13 +127,13 @@ void generate_zero_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, 
         r_msb = get_msb<BW, F, K>(*r_m);
     }
     else{
-        r_e.resize(row);
-        r_msb.resize(row);
-        T* val = rg.template randomGE<T>(row, smallBW);
+        r_e.resize(col);
+        r_msb.resize(col);
+        T* val = rg.template randomGE<T>(col, smallBW);
         
         if(r_m == nullptr){
-            r_m = new FixTensor<T, smallBW, F, K, Rank>(row);
-            for (int i = 0; i < row; i++) {
+            r_m = new FixTensor<T, smallBW, F, K, Rank>(col);
+            for (int i = 0; i < col; i++) {
                 (*r_m)(i) = Fix<T, smallBW, F, K>(val[i]); 
             }
         }
@@ -155,7 +171,7 @@ truncate_reduce_tensor(const FixTensor<T, bw, f, k, Rank, Options>& x_share) {
 // Layout per element (per party): [r_m_share (m-ring), r_e_share (bw-ring), r_msb_share (bw-ring)]
 
 template <typename T, int bw, int m, int f, int k>
-Fix<T, bw, f, k> zero_extend(const Fix<T, m, f, k>& x_m_share, const Fix<T, m, f, k>& r_m_share, const Fix<T, bw, f, k>& r_e_share, const Fix<T, bw, f, k>& r_msb_share) {
+Fix<T, bw, f, k> zero_extend(const Fix<T, m, f, k>& x_m_share, ZeroExtendScalarRandomness<T, bw, m, f, k> randomness) {
     static_assert(bw > m, "zero_extend requires bw > m");
     if (mpc_instance == nullptr) throw std::runtime_error("MPC instance not initialized.");
     
@@ -165,7 +181,7 @@ Fix<T, bw, f, k> zero_extend(const Fix<T, m, f, k>& x_m_share, const Fix<T, m, f
     int party = mpc_instance->party;
     Fix<T, m, f, k> bias = (party == 1 && m >= 2) ? Fix<T, m, f, k>(static_cast<T>(T(1) << (m - 2))) : Fix<T, m, f, k>(static_cast<T>(0));
     // 1) xhat_m_share = (x_m_share + r_m_share) in m-ring
-    Fix<T, m, f, k> xhat_share_m = x_m_share + r_m_share + bias;
+    Fix<T, m, f, k> xhat_share_m = x_m_share + randomness.R + bias;
 
     // 2) Reconstruct xhat (public), then MSB at bit (m-1)
     Fix<T, m, f, k> xhat_m_public = reconstruct(xhat_share_m);
@@ -173,7 +189,7 @@ Fix<T, bw, f, k> zero_extend(const Fix<T, m, f, k>& x_m_share, const Fix<T, m, f
 
     // 3) e = 2^m * <r^msb>  (in bw-ring)
     T two_pow_m = (m >= 64) ? T(0) : (T(1) << m);
-    T e_share_val = (two_pow_m == T(0)) ? T(0) : (r_msb_share.val * two_pow_m) & bw_mask;
+    T e_share_val = (two_pow_m == T(0)) ? T(0) : (randomness.R_MSB.val * two_pow_m) & bw_mask;
 
     // 4) t = <e> * (1 - MSB(xhat))
     T one_minus_msb = T(1) - msb;
@@ -182,7 +198,7 @@ Fix<T, bw, f, k> zero_extend(const Fix<T, m, f, k>& x_m_share, const Fix<T, m, f
     // 5) Return σ·(x̂ − 2^{m−2}) − <r^e> + <t>  (mod 2^bw)
     T bias_val = (m >= 2) ? (T(1) << (m - 2)) : T(0);
     T term_sigma = (party == 1 ? ((xhat_m_public.val + bw_mask + 1) - bias_val) & bw_mask : T(0));
-    T xext_val = (term_sigma + ((t_share_val + bw_mask + 1) - r_e_share.val)) & bw_mask;
+    T xext_val = (term_sigma + ((t_share_val + bw_mask + 1) - randomness.R_E.val)) & bw_mask;
     return Fix<T, bw, f, k>(xext_val);
 }
 

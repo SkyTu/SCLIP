@@ -128,17 +128,26 @@ sum_reduce_tensor(const FixTensor<T, bw, f, k, 3, Options>& input) {
 }
 
 // Sum-reduce a 2D tensor to a 1D tensor by summing each row (axis 1)
-template <typename T, int bw, int f, int k, int Options>
+template <int axis, typename T, int bw, int f, int k, int Options>
 FixTensor<T, bw, f, k, 1, Options>
 sum_reduce_tensor(const FixTensor<T, bw, f, k, 2, Options>& input) {
     long long dim_rows = input.dimension(0);
     long long dim_cols = input.dimension(1);
-    FixTensor<T, bw, f, k, 1, Options> result(dim_rows);
+    FixTensor<T, bw, f, k, 1, Options> result;
+    if constexpr (axis == 0) {
+        result.resize(dim_cols);
+    } else if constexpr (axis == 1) {
+        result.resize(dim_rows);
+    }
     result.setZero();
 
-    for (long long i = 0; i < dim_rows; ++i) {
-        for (long long j = 0; j < dim_cols; ++j) {
-            result(i) += input(i, j);
+    for (long long j = 0; j < dim_cols; ++j) {
+        for (long long i = 0; i < dim_rows; ++i) {
+            if constexpr (axis == 0) {
+                result(j) += input(i, j);
+            } else if constexpr (axis == 1) {
+                result(i) += input(i, j);
+            }
         }
     }
     return result;

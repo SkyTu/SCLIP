@@ -23,7 +23,6 @@ struct ElementwiseMulRandomness{
 template <typename T, int n, int m, int f, int k, int Rank, int Options = Eigen::RowMajor>
 ElementwiseMulRandomness<T, n, m, f, k, Rank, Options> read_elementwise_mul_randomness(MPC& mpc, int batch, int row, int col){
     ElementwiseMulRandomness<T, n, m, f, k, Rank, Options> randomness;
-    assert(Rank == 3 || Rank == 2);
     if constexpr (Rank == 3){ // Use if constexpr
         randomness.r_x_m.resize(batch, row, col);
         randomness.r_y_m.resize(batch, row, col);
@@ -35,7 +34,7 @@ ElementwiseMulRandomness<T, n, m, f, k, Rank, Options> read_elementwise_mul_rand
         randomness.r_x_rymsb.resize(batch, row, col);
         randomness.r_xmsb_y.resize(batch, row, col);
     }
-    else{ // This branch is only compiled if Rank is not 3
+    else if constexpr(Rank == 2){ // This branch is only compiled if Rank is not 3
         randomness.r_x_m.resize(row, col);
         randomness.r_y_m.resize(row, col);
         randomness.r_x_n.resize(row, col);
@@ -45,6 +44,17 @@ ElementwiseMulRandomness<T, n, m, f, k, Rank, Options> read_elementwise_mul_rand
         randomness.r_xy.resize(row, col);
         randomness.r_x_rymsb.resize(row, col);
         randomness.r_xmsb_y.resize(row, col);
+    }
+    else if constexpr(Rank == 1){
+        randomness.r_x_m.resize(col);
+        randomness.r_y_m.resize(col);
+        randomness.r_x_n.resize(col);
+        randomness.r_y_n.resize(col);
+        randomness.r_x_msb.resize(col);
+        randomness.r_y_msb.resize(col);
+        randomness.r_xy.resize(col);
+        randomness.r_x_rymsb.resize(col);
+        randomness.r_xmsb_y.resize(col);
     }
     mpc.read_fixtensor_share(randomness.r_x_m);
     mpc.read_fixtensor_share(randomness.r_y_m);    
@@ -65,9 +75,16 @@ int get_elementwise_mul_random_size(int batch, int row, int col){
     if(Rank == 3){
         m_size = batch * row * col * sizeof(T);
         n_size = batch * row * col * sizeof(T);
-    } else {
+    } else if(Rank == 2){
         m_size = row * col * sizeof(T);
         n_size = row * col * sizeof(T);
+    }
+    else if(Rank == 1){
+        m_size = col * sizeof(T);
+        n_size = col * sizeof(T);
+    }
+    else{
+        throw std::runtime_error("Invalid rank for elementwise mul randomness");
     }
     return 2 * m_size + 7 * n_size;
 }
@@ -136,7 +153,7 @@ void generate_elementwise_mul_randomness(
         secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
         secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
-    } else {
+    } else if constexpr(Rank == 2){
         FixTensor<T, n, f, k, Rank, Options> r_x_n(row, col), r_y_n(row, col), r_x_msb(row, col), r_y_msb(row, col);
         FixTensor<T, n, f, k, Rank, Options> r_xy(row, col), r_x_rymsb(row, col), r_xmsb_y(row, col);
         if (r_x_m == nullptr) {
@@ -163,6 +180,49 @@ void generate_elementwise_mul_randomness(
                     (*r_y_m)(i, j) = Fix<T, m, f, k>(val[i * col + j]);
                     r_y_n(i, j) = Fix<T, n, f, k>(val[i * col + j]);
                 }
+            }
+            delete[] val; // <--- 必须加上这一行！
+        }
+        else{
+            r_y_n = extend_locally<n,f,k>(*r_y_m);
+        }
+        r_x_msb = get_msb<n,f,k>(*r_x_m);
+        r_y_msb = get_msb<n,f,k>(*r_y_m);
+        r_xy = r_x_n * r_y_n;
+        r_x_rymsb = r_x_n * r_y_msb;
+        r_xmsb_y = r_x_msb * r_y_n;
+        secret_share_and_write_tensor(*r_x_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(*r_y_m, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_n, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_y_msb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xy, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_x_rymsb, p0_buf, p1_buf);
+        secret_share_and_write_tensor(r_xmsb_y, p0_buf, p1_buf);
+    } else if constexpr(Rank == 1){
+        FixTensor<T, n, f, k, Rank, Options> r_x_n(col), r_y_n(col), r_x_msb(col), r_y_msb(col);
+        FixTensor<T, n, f, k, Rank, Options> r_xy(col), r_x_rymsb(col), r_xmsb_y(col);
+        if (r_x_m == nullptr) {
+            r_x_m_storage.resize(col);
+            r_x_m = &r_x_m_storage;
+            T* val = rg.template randomGE<T>(col, m);
+            for (int i = 0; i < col; i++) {
+                (*r_x_m)(i) = Fix<T, m, f, k>(val[i]);
+                r_x_n(i) = Fix<T, n, f, k>(val[i]);
+            }
+            delete[] val; // <--- 必须加上这一行！
+        }
+        else{
+            r_x_n = extend_locally<n,f,k>(*r_x_m);
+        }
+        if (r_y_m == nullptr) {
+            r_y_m_storage.resize(col);
+            r_y_m = &r_y_m_storage;
+            T* val = rg.template randomGE<T>(col, m);
+            for (int i = 0; i < col; i++) {
+                (*r_y_m)(i) = Fix<T, m, f, k>(val[i]);
+                r_y_n(i) = Fix<T, n, f, k>(val[i]);
             }
             delete[] val; // <--- 必须加上这一行！
         }
@@ -212,7 +272,6 @@ auto elementwise_mul_opt(
         x_hat = reconstruct_tensor(x_m_share + randomness.r_x_m);
     }
     
-
     T two_pow_m_minus_2_val = (m < 2 || m - 2 >= 64) ? 0 : (T(1) << (m - 2));
     FixTensor<T, m, f, k, Rank, Options> const_term_m(x_hat.dimensions());
     const_term_m.setConstant(Fix<T,m,f,k>(two_pow_m_minus_2_val));

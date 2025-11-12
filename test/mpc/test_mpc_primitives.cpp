@@ -250,15 +250,11 @@ void test_truncate_zero_extend_scalar(MPC& mpc) {
     FixM x_m_share = secret_share(x_m_plain);
 
     // 3. Get randomness for the protocol
-    FixM r_m_share;
-    mpc.read_fix_share(r_m_share);
-    FixBW r_e_share;
-    mpc.read_fix_share(r_e_share);
-    FixBW r_msb_share;
-    mpc.read_fix_share(r_msb_share);
-
+    ZeroExtendScalarRandomness<uint64_t, BW, M_BITS, F, K> zero_extend_scalar_randomness;
+    zero_extend_scalar_randomness = read_zero_extend_scalar_randomness<uint64_t, BW, M_BITS, F, K>(mpc);
+    
     // 4. Run the secure zero-extend protocol
-    auto x_ext_share = zero_extend(x_m_share, r_m_share, r_e_share, r_msb_share);
+    auto x_ext_share = zero_extend(x_m_share, zero_extend_scalar_randomness);
 
     // 5. Reconstruct and check
     auto x_reconstructed = reconstruct(x_ext_share);
@@ -508,18 +504,9 @@ void test_square_scalar_opt(MPC& mpc) {
     
     FixM x_m_share = secret_share(x_m_plain);
 
-    FixM r_m_share;
-    mpc.read_fix_share(r_m_share);
-    FixBW r_n_share;
-    mpc.read_fix_share(r_n_share);
-    FixBW r_square_share;
-    mpc.read_fix_share(r_square_share);
-    FixBW r_msb_share;
-    mpc.read_fix_share(r_msb_share);
-    FixBW r_r_msb_share;
-    mpc.read_fix_share(r_r_msb_share);
-
-    auto x_square_share = square_scalar_opt<uint64_t, BW, M_BITS, F, K>(x_m_share, r_m_share, r_n_share, r_square_share, r_msb_share, r_r_msb_share);
+    SquareScalarRandomness<uint64_t, BW, M_BITS, F, K> square_scalar_randomness;
+    square_scalar_randomness = read_square_scalar_randomness<uint64_t, BW, M_BITS, F, K>(mpc);
+    auto x_square_share = square_scalar_opt<uint64_t, BW, M_BITS, F, K>(x_m_share, square_scalar_randomness);
     auto x_reconstructed = truncate_reduce(reconstruct(x_square_share));
     
     if (mpc.party == 0) {
@@ -551,16 +538,9 @@ void test_exp_scalar_opt(MPC& mpc) {
     Fix<uint64_t, BW, F, K> R_E_EXT;
     Fix<uint64_t, BW, F, K> R_MSB_EXT;
 
-    for (int i = 0; i < RECIPROCAL_NR_ITERS; ++i) {
-        mpc.read_fix_share(R(i));
-        mpc.read_fix_share(R_N(i));
-        mpc.read_fix_share(R_SQUARE(i));
-        mpc.read_fix_share(R_MSB(i));
-        mpc.read_fix_share(R_R_MSB(i));
-    }
-    mpc.read_fix_share(R_M_EXT);
-    mpc.read_fix_share(R_E_EXT);
-    mpc.read_fix_share(R_MSB_EXT);
+    
+    ExpScalarRandomness<uint64_t, BW, M_BITS, F, K> exp_scalar_randomness;
+    exp_scalar_randomness = read_exp_scalar_randomness<uint64_t, BW, M_BITS, F, K>(mpc);
 
     FixBW x_secret(0);
     if (mpc.party == 0) {
@@ -568,7 +548,7 @@ void test_exp_scalar_opt(MPC& mpc) {
     }
     
     FixBW x_n_share = secret_share(x_secret);
-    FixBW x_exp_share = exp_scalar<uint64_t, BW, M_BITS, F, K>(x_n_share, R, R_N, R_SQUARE, R_MSB, R_R_MSB, R_M_EXT, R_E_EXT, R_MSB_EXT);
+    FixBW x_exp_share = exp_scalar<uint64_t, BW, M_BITS, F, K>(x_n_share, exp_scalar_randomness);
     FixBW x_exp_reconstructed = reconstruct(x_exp_share);
 
     if (mpc.party == 0) {
@@ -671,7 +651,7 @@ void test_reciprocal_tensor(MPC& mpc) {
     using FixTensorBW = FixTensor<uint64_t, BW, F, K, 3>;
 
     FixTensorBW X_plain(1, 3, 3);
-    X_plain.setValues({{{1.5, 2.2, 3.3}, {4.4, 5.5, 6.6}, {7.7, 8.8, 9.9}}});
+    X_plain.setValues({{{0.1, 0.01, 0.001}, {4.4, 5.5, 6.6}, {7.7, 8.8, 9.9}}});
     FixTensorBW X_n_share = secret_share_tensor(X_plain);
     
     ReciprocalRandomness<uint64_t, BW, M_BITS, F, K, 3> randomness;

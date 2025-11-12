@@ -25,7 +25,7 @@ struct FCLayerParams {
     bool use_bias;          // Whether to use a bias term
     bool reconstructed_input; // Whether the input is already reconstructed (public)
     // int trunc_forward;   // REMOVED - will be a template parameter on forward()
-    int trunc_backward;     // Backward pass truncation method
+    // int trunc_backward;     // Backward pass truncation method
 };
 
 template <typename T, int IN_BW, int OUT_BW, int F, int K_INT>
@@ -150,10 +150,6 @@ public:
         Z.resize(p.B, p.out_dim);
         U.setRandom();
         V.setRandom();
-        std::cout << "U" << std::endl;
-        std::cout << U << std::endl;
-        std::cout << "V" << std::endl;
-        std::cout << V << std::endl;
         Z = tensor_mul(U, V);
         secret_share_and_write_tensor(U, p0_buf, p1_buf);
         secret_share_and_write_tensor(V, p0_buf, p1_buf);

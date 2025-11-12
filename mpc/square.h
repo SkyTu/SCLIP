@@ -16,6 +16,26 @@ struct SquareRandomness{
     FixTensor<T, n, f, k, Rank> R_R_MSB;
 };
 
+template <typename T, int n, int m, int f, int k>
+struct SquareScalarRandomness{
+    Fix<T, m, f, k> R;
+    Fix<T, n, f, k> R_N;
+    Fix<T, n, f, k> R_SQUARE;
+    Fix<T, n, f, k> R_MSB;
+    Fix<T, n, f, k> R_R_MSB;
+};
+
+template <typename T, int n, int m, int f, int k>
+SquareScalarRandomness<T, n, m, f, k> read_square_scalar_randomness(MPC& mpc){
+    SquareScalarRandomness<T, n, m, f, k> randomness;
+    mpc.read_fix_share(randomness.R);
+    mpc.read_fix_share(randomness.R_N);
+    mpc.read_fix_share(randomness.R_SQUARE);
+    mpc.read_fix_share(randomness.R_MSB);
+    mpc.read_fix_share(randomness.R_R_MSB);
+    return randomness;
+}
+
 template <typename T, int n, int m, int f, int k, int Rank>
 SquareRandomness<T, n, m, f, k, Rank> read_square_randomness(MPC& mpc, int batch, int row, int col){
     SquareRandomness<T, n, m, f, k, Rank> randomness;
@@ -26,12 +46,19 @@ SquareRandomness<T, n, m, f, k, Rank> read_square_randomness(MPC& mpc, int batch
         randomness.R_MSB.resize(batch, row, col);
         randomness.R_R_MSB.resize(batch, row, col);
     }
-    else{
+    else if constexpr(Rank == 2){
         randomness.R.resize(row, col);
         randomness.R_N.resize(row, col);
         randomness.R_SQUARE.resize(row, col);
         randomness.R_MSB.resize(row, col);
         randomness.R_R_MSB.resize(row, col);
+    }
+    else if constexpr(Rank == 1){
+        randomness.R.resize(col);
+        randomness.R_N.resize(col);
+        randomness.R_SQUARE.resize(col);
+        randomness.R_MSB.resize(col);
+        randomness.R_R_MSB.resize(col);
     }
     mpc.read_fixtensor_share(randomness.R);
     mpc.read_fixtensor_share(randomness.R_N);
@@ -48,9 +75,13 @@ int get_square_random_size(int batch, int row, int col){
     if(Rank == 3){
         m_size = batch * row * col * sizeof(T);
         n_size = batch * row * col * sizeof(T);
-    } else {
+    } else if (Rank == 2) {
         m_size = row * col * sizeof(T);
         n_size = row * col * sizeof(T);
+    }
+    else if (Rank == 1) {
+        m_size = col * sizeof(T);
+        n_size = col * sizeof(T);
     }
     return m_size + 4 * n_size;
 }
@@ -83,7 +114,7 @@ void generate_square_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
 }
 
 
-template <typename T, int n, int m, int f, int k,  int Rank>
+template <typename T, int n, int m, int f, int k, int Rank>
 void generate_square_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
     FixTensor<T, m, f, k, Rank> R;
     FixTensor<T, n, f, k, Rank> R_N;
@@ -115,7 +146,7 @@ void generate_square_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int r
         secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
         secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
         secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
-    } else {
+    } else if constexpr(Rank == 2){
         R.resize(row, col);
         R_N.resize(row, col);
         R_SQUARE.resize(row, col);
@@ -138,12 +169,33 @@ void generate_square_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int r
         secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
         secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
         secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
+    } else if constexpr(Rank == 1){
+        R.resize(col);
+        R_N.resize(col);
+        R_SQUARE.resize(col);
+        R_MSB.resize(col);
+        R_R_MSB.resize(col);
+        Random rg;
+        T* val = rg.template randomGE<T>(col, m);
+        for (int i = 0; i < col; i++) {
+            R(i) = Fix<T, m, f, k>(val[i]);
+        }
+        delete[] val; // <--- 必须加上这一行！
+        R_N = extend_locally<n, f, k>(R);
+        R_SQUARE = R_N * R_N;
+        R_MSB = get_msb<n, f, k>(R);
+        R_R_MSB = R_N * R_MSB;
+        secret_share_and_write_tensor(R, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_N, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_SQUARE, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_MSB, p0_buf, p1_buf);
+        secret_share_and_write_tensor(R_R_MSB, p0_buf, p1_buf);
     }
 }
 
 template <typename T, int n, int m, int f, int k>
-Fix<T, n, f, k> square_scalar_opt(Fix<T, m, f, k>x_m_share, Fix<T, m, f, k> R, Fix<T, n, f, k> R_N, Fix<T, n, f, k> R_SQUARE, Fix<T, n, f, k> R_MSB, Fix<T, n, f, k> R_R_MSB){
-    auto x_hat = reconstruct(x_m_share + R);
+Fix<T, n, f, k> square_scalar_opt(Fix<T, m, f, k>x_m_share, SquareScalarRandomness<T, n, m, f, k> randomness){
+    auto x_hat = reconstruct(x_m_share + randomness.R);
 
     T two_pow_m_minus_2_val = (m < 2 || m - 2 >= 64) ? 0 : (T(1) << (m - 2));
     Fix<T, m, f, k> const_term_m = Fix<T, m, f, k>(two_pow_m_minus_2_val);
@@ -165,10 +217,10 @@ Fix<T, n, f, k> square_scalar_opt(Fix<T, m, f, k>x_m_share, Fix<T, m, f, k> R, F
     else{
         term1 = Fix<T,n,f,k>(0);
     }
-    Fix<T, n, f, k> term2 = x_hat_prime_n * R_N;
-    Fix<T, n, f, k> term3 = x_hat_prime_n * t_x * R_MSB;
-    Fix<T, n, f, k> term4 = t_x * R_R_MSB;
-    return term1 + R_SQUARE - term2 - term2 + term3 + term3 - term4 - term4;
+    Fix<T, n, f, k> term2 = x_hat_prime_n * randomness.R_N;
+    Fix<T, n, f, k> term3 = x_hat_prime_n * t_x * randomness.R_MSB;
+    Fix<T, n, f, k> term4 = t_x * randomness.R_R_MSB;
+    return term1 + randomness.R_SQUARE - term2 - term2 + term3 + term3 - term4 - term4;
 
 }
 

@@ -17,35 +17,56 @@ struct ExpRandomness{
     ZeroExtendRandomness<T, n, m, f, k, Rank> zero_extend_randomness;
 };
 
+template <typename T, int n, int m, int f, int k>
+struct ExpScalarRandomness{
+    SquareScalarRandomness<T, n, m, f, k> square_randomness[RECIPROCAL_NR_ITERS];
+    ZeroExtendScalarRandomness<T, n, m, f, k> zero_extend_randomness;
+};
+
+template <typename T, int n, int m, int f, int k>
+ExpScalarRandomness<T, n, m, f, k> read_exp_scalar_randomness(MPC& mpc, bool extend = true){
+    ExpScalarRandomness<T, n, m, f, k> randomness;
+    for(int i = 0; i < RECIPROCAL_NR_ITERS; ++i){
+        randomness.square_randomness[i] = read_square_scalar_randomness<T, n, m, f, k>(mpc);
+    }
+    if (extend){
+        randomness.zero_extend_randomness = read_zero_extend_scalar_randomness<T, n, m, f, k>(mpc);
+    }
+    return randomness;
+}
+
 template <typename T, int n, int m, int f, int k, int Rank>
-ExpRandomness<T, n, m, f, k, Rank> read_exp_randomness(MPC& mpc, int batch, int row, int col){
+ExpRandomness<T, n, m, f, k, Rank> read_exp_randomness(MPC& mpc, int batch, int row, int col, bool extend = true){
     ExpRandomness<T, n, m, f, k, Rank> randomness;
     for(int i = 0; i < RECIPROCAL_NR_ITERS; ++i){
         randomness.square_randomness[i] = read_square_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
     }
-    randomness.zero_extend_randomness = read_zero_extend_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+    if (extend){
+        randomness.zero_extend_randomness = read_zero_extend_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+    }
     return randomness;
 }
 
 template <typename T>
-size_t get_exp_scalar_random_size(){
-    return get_square_scalar_random_size<T>() * RECIPROCAL_NR_ITERS + get_zero_extend_scalar_random_size<T>();
+size_t get_exp_scalar_random_size(bool extend = true){
+    return get_square_scalar_random_size<T>() * RECIPROCAL_NR_ITERS + (extend ? get_zero_extend_scalar_random_size<T>() : 0);
 }
 
 template <typename T, int n, int m, int f, int k>
-void generate_exp_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf){
+void generate_exp_scalar_randomness(Buffer& p0_buf, Buffer& p1_buf, bool extend = true){
     int iters = RECIPROCAL_NR_ITERS;
     for(int i = 0; i < iters; ++i){
         generate_square_scalar_randomness<T, n, m, f, k>(p0_buf, p1_buf);
     }
-    generate_zero_extend_scalar_randomness<T, n, m, f, k>(p0_buf, p1_buf);
+    if (extend){
+        std::cout << "extend == true" << std::endl;
+        generate_zero_extend_scalar_randomness<T, n, m, f, k>(p0_buf, p1_buf);
+    }
     return;
 }
 
 template <typename T, int n, int m, int f, int k>
-Fix<T, n, f, k> exp_scalar(Fix<T, n, f, k> x_n_share, FixTensor<T, m, f, k, 1, Eigen::RowMajor> R, FixTensor<T, n, f, k, 1, Eigen::RowMajor> R_N, 
-    FixTensor<T, n, f, k, 1, Eigen::RowMajor> R_SQUARE, FixTensor<T, n, f, k, 1, Eigen::RowMajor> R_MSB, FixTensor<T, n, f, k, 1, Eigen::RowMajor> R_R_MSB, 
-    Fix<T, m, f, k> R_M_EXT, Fix<T, n, f, k> R_E_EXT, Fix<T, n, f, k> R_MSB_EXT){
+Fix<T, n, f, k> exp_scalar(Fix<T, n, f, k> x_n_share, ExpScalarRandomness<T, n, m, f, k> randomness){
     int iters = RECIPROCAL_NR_ITERS;
     x_n_share = x_n_share * Fix<T, n, f, k>(1.0 / pow(2.0, iters));
     auto init_m_share = truncate_reduce<T, n, f, k>(x_n_share);
@@ -56,35 +77,49 @@ Fix<T, n, f, k> exp_scalar(Fix<T, n, f, k> x_n_share, FixTensor<T, m, f, k, 1, E
     else {
         init = init_m_share;
     }
-    auto tmp = reconstruct(init);
-    if (mpc_instance->party==0) {
-        std::cout << "init.to_float<double>() = " << tmp.template to_float<double>() << std::endl;
-    }
-
     for(int i = 0; i < iters; i++){
         auto tmp = reconstruct(init);
-        if (mpc_instance->party==0) {
-            std::cout << "tmp.to_float<double>() = " << tmp.template to_float<double>() << std::endl;
-        }
-        auto res = square_scalar_opt<T, n, m, f, k>(init, R(i), R_N(i), R_SQUARE(i), R_MSB(i), R_R_MSB(i));
+        auto res = square_scalar_opt<T, n, m, f, k>(init, randomness.square_randomness[i]);
         init = truncate_reduce<T, n, f, k>(res);
     }
-    Fix<T, n, f, k> res = zero_extend<T, n, m, f, k>(init, R_M_EXT, R_E_EXT, R_MSB_EXT);
+    Fix<T, n, f, k> res = zero_extend<T, n, m, f, k>(init, randomness.zero_extend_randomness);
     return res;
 }
 
+template <typename T, int n, int m, int f, int k>
+Fix<T, m, f, k> exp_scalar_without_extend(Fix<T, n, f, k> x_n_share, ExpScalarRandomness<T, n, m, f, k> randomness){
+    int iters = RECIPROCAL_NR_ITERS;
+    x_n_share = x_n_share * Fix<T, n, f, k>(1.0 / pow(2.0, iters));
+    auto init_m_share = truncate_reduce<T, n, f, k>(x_n_share);
+    Fix<T, m, f, k> init;
+    if (mpc_instance->party==0) {
+        init = Fix<T, m, f, k>(1.0) + init_m_share;
+    }
+    else {
+        init = init_m_share;
+    }
+    for(int i = 0; i < iters; i++){
+        auto tmp = reconstruct(init);
+        auto res = square_scalar_opt<T, n, m, f, k>(init, randomness.square_randomness[i]);
+        init = truncate_reduce<T, n, f, k>(res);
+    }
+    return init;
+}
+
 template <typename T, int Rank>
-size_t get_exp_random_size(int batch, int row, int col){
-    return get_square_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_zero_extend_random_size<T, Rank>(batch, row, col);
+size_t get_exp_random_size(int batch, int row, int col, bool extend = true){
+    return get_square_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + (extend ? get_zero_extend_random_size<T, Rank>(batch, row, col) : 0);
 }
 
 template <typename T, int n, int m, int f, int k, int Rank>
-void generate_exp_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
+void generate_exp_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col, bool extend = true){
     int iters = RECIPROCAL_NR_ITERS;
     for(int i = 0; i < iters; ++i){
         generate_square_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
     }
-    generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+    if (extend){
+        generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+    }
     return;
 }
 
@@ -112,6 +147,30 @@ FixTensor<T, n, f, k, Rank, Options> exp_tensor(FixTensor<T, n, f, k, Rank, Opti
     }
     auto res = zero_extend_tensor<T, n, m, f, k, Rank, Options>(init, randomness.zero_extend_randomness);
     return res;
+}
+
+template <typename T, int n, int m, int f, int k, int Rank, int Options>
+FixTensor<T, m, f, k, Rank, Options> exp_tensor_non_extend(FixTensor<T, n, f, k, Rank, Options> x_n_share, ExpRandomness<T, n, m, f, k, Rank> randomness){
+    int iters = RECIPROCAL_NR_ITERS;
+    FixTensor<T, n, f, k, Rank, Options> constant(x_n_share.dimensions());
+    constant.setConstant(1.0 / pow(2.0, iters));
+    x_n_share = x_n_share * constant;
+    auto init_m_share = truncate_reduce_tensor(x_n_share);
+    FixTensor<T, m, f, k, Rank, Options> init;
+    FixTensor<T, m, f, k, Rank, Options> ones(x_n_share.dimensions());
+    ones.setConstant(1.0);
+    if (mpc_instance->party==0) {
+        init = ones + init_m_share;
+    }
+    else {
+        init = init_m_share;
+    }
+    for(int i = 0; i < iters; i++){
+        auto tmp = reconstruct_tensor(init);
+        auto res = square_tensor_opt<T, n, m, f, k, Rank, Options>(init, randomness.square_randomness[i]);
+        init = truncate_reduce_tensor(res);
+    }
+    return init;
 }
 
 template <typename T, int Rank>
@@ -340,7 +399,7 @@ struct ReciprocalRandomness{
 
 template <typename T, int Rank>
 size_t get_reciprocal_random_size(int batch, int row, int col){
-    return get_exp_random_size<T, Rank>(batch, row, col) + get_square_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_elementwise_mul_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_zero_extend_random_size<T, Rank>(batch, row, col) * (RECIPROCAL_NR_ITERS + 1);
+    return get_exp_random_size<T, Rank>(batch, row, col) + get_square_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_elementwise_mul_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_zero_extend_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS;
 }
 
 template <typename T, int n, int m, int f, int k, int Rank>
@@ -377,7 +436,12 @@ FixTensor<T, n, f, k, Rank> reciprocal_tensor(FixTensor<T, n, f, k, Rank> x_n_sh
     // init = 3 * e^{1-2*x} + 0.003
     constant_n_tmp.setConstant(Fix<T, n, f, k>(2));
     init_n_share = x_n_share * constant_n_tmp;
-    constant_n_tmp.setConstant(1.0);
+    if(mpc_instance->party == 0){
+        constant_n_tmp.setConstant(1.0);
+    }
+    else{
+        constant_n_tmp.setConstant(0.0);
+    }
     init_n_share = constant_n_tmp - init_n_share;
     init_n_share = exp_tensor<T, n, m, f, k, Rank>(init_n_share, randomness.exp_randomness);
     constant_n_tmp.setConstant(Fix<T, n, f, k>(3));
@@ -397,4 +461,83 @@ FixTensor<T, n, f, k, Rank> reciprocal_tensor(FixTensor<T, n, f, k, Rank> x_n_sh
         init_n_share = term1 - init_n_share;   
     }
     return init_n_share;
+}
+
+template <typename T, int Rank>
+size_t get_reciprocal_non_extend_random_size(int batch, int row, int col){
+    return get_exp_random_size<T, Rank>(batch, row, col) + get_square_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_elementwise_mul_random_size<T, Rank>(batch, row, col) * RECIPROCAL_NR_ITERS + get_zero_extend_random_size<T, Rank>(batch, row, col) * (RECIPROCAL_NR_ITERS - 1);
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+ReciprocalRandomness<T, n, m, f, k, Rank> read_reciprocal_non_extend_randomness(MPC& mpc, int batch, int row, int col){
+    ReciprocalRandomness<T, n, m, f, k, Rank> randomness;
+    randomness.exp_randomness = read_exp_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+    for(int i = 0; i < RECIPROCAL_NR_ITERS; i++){
+        randomness.square_randomness[i] = read_square_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+        randomness.elementwise_mul_randomness[i] = read_elementwise_mul_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+        if(i != RECIPROCAL_NR_ITERS - 1){
+            randomness.zero_extend_randomness[i] = read_zero_extend_randomness<T, n, m, f, k, Rank>(mpc, batch, row, col);
+        }
+    }
+    return randomness;
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+void generate_reciprocal_non_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, int batch, int row, int col){
+    int iters = RECIPROCAL_NR_ITERS;
+    generate_exp_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+    for(int i = 0; i < iters; i++){
+        generate_square_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+        generate_elementwise_mul_randomness<T, n, m, f, k, Rank, Eigen::RowMajor>(p0_buf, p1_buf, batch, row, col);
+        std::cout << "generate_zero_extend_randomness: " << i << std::endl;
+        if(i != iters - 1){
+            generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
+        }
+    }
+    return;
+}
+
+template <typename T, int n, int m, int f, int k, int Rank>
+FixTensor<T, m, f, k, Rank> reciprocal_tensor_non_extend(FixTensor<T, n, f, k, Rank> x_n_share, ReciprocalRandomness<T, n, m, f, k, Rank> randomness){
+    int iters = RECIPROCAL_NR_ITERS;
+    FixTensor<T, n, f, k, Rank> constant_n_tmp(x_n_share.dimensions());
+    FixTensor<T, m, f, k, Rank> constant_m_tmp(x_n_share.dimensions());
+    FixTensor<T, n, f, k, Rank> init_n_share(x_n_share.dimensions());
+    FixTensor<T, m, f, k, Rank> init_m_share(x_n_share.dimensions());
+    FixTensor<T, m, f, k, Rank> res(x_n_share.dimensions());
+    // init = 3 * e^{1-2*x} + 0.003
+    constant_n_tmp.setConstant(Fix<T, n, f, k>(2));
+    init_n_share = x_n_share * constant_n_tmp;
+    if(mpc_instance->party == 0){
+        constant_n_tmp.setConstant(1.0);
+    }
+    else{
+        constant_n_tmp.setConstant(0.0);
+    }
+    init_n_share = constant_n_tmp - init_n_share;
+    init_n_share = exp_tensor<T, n, m, f, k, Rank>(init_n_share, randomness.exp_randomness);
+    constant_n_tmp.setConstant(Fix<T, n, f, k>(3));
+    init_n_share = constant_n_tmp * init_n_share;
+    constant_n_tmp.setConstant(0.003);
+    init_n_share = init_n_share + constant_n_tmp;
+
+    for(int i = 0; i < iters; i++){
+        constant_n_tmp.setConstant(Fix<T, n, f, k>(2));
+        auto term1 = constant_n_tmp * init_n_share;
+        init_m_share = change_bitwidth<m, f, k, T, n, f, k, Rank, Eigen::RowMajor>(init_n_share);
+        auto x_m_share = change_bitwidth<m, f, k, T, n, f, k, Rank, Eigen::RowMajor>(x_n_share);
+        auto sq = square_tensor_opt<T, n, m, f, k, Rank>(init_m_share, randomness.square_randomness[i], false);
+        auto sq_m_share = truncate_reduce_tensor(sq);
+        init_n_share = elementwise_mul_opt<T, n, m, f, k, Rank>(x_m_share, sq_m_share, randomness.elementwise_mul_randomness[i], false, false);
+        if(i != iters - 1){
+            init_n_share = zero_extend_tensor<T, n, m, f, k, Rank>(truncate_reduce_tensor(init_n_share), randomness.zero_extend_randomness[i]);
+            init_n_share = term1 - init_n_share;   
+        }
+        else{
+            res = change_bitwidth<m, f, k, T, n, f, k, Rank, Eigen::RowMajor>(term1);
+            init_m_share = truncate_reduce_tensor(init_n_share);
+            res = res - init_m_share;
+        }
+    }
+    return res;
 }

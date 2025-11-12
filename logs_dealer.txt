@@ -1,0 +1,17 @@
+Softmax Dealer starting...
+Exp scalar randomness size: 424
+Zero extend randomness size: 600
+Exp randomness size: 10600
+Reciprocal randomness size: 15488
+Elementwise mul randomness size: 3600
+Zero extend randomness size: 1200
+Zero extend randomness size: 600
+Zero extend randomness size: 600
+Exp scalar randomness size: 424
+Zero extend randomness size: 600
+Exp randomness size: 10600
+Reciprocal randomness size: 15464
+Elementwise mul randomness size: 3600
+Zero extend randomness size: 1200
+Zero extend randomness size: 600
+Zero extend randomness size: 600
