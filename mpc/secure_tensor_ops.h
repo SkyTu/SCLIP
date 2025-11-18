@@ -489,7 +489,6 @@ void generate_reciprocal_non_extend_randomness(Buffer& p0_buf, Buffer& p1_buf, i
     for(int i = 0; i < iters; i++){
         generate_square_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
         generate_elementwise_mul_randomness<T, n, m, f, k, Rank, Eigen::RowMajor>(p0_buf, p1_buf, batch, row, col);
-        std::cout << "generate_zero_extend_randomness: " << i << std::endl;
         if(i != iters - 1){
             generate_zero_extend_randomness<T, n, m, f, k, Rank>(p0_buf, p1_buf, batch, row, col);
         }

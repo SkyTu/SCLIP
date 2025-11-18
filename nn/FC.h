@@ -74,7 +74,6 @@ public:
                     W_plain.data()[i] = FixIn(float_weights[i]);
                 }
                 *weights_ptr += W_plain.size() * sizeof(float);
-
                 if (p.use_bias) {
                     float_weights = reinterpret_cast<float*>(*weights_ptr);
                     for (int i = 0; i < Y_plain.size(); i++) {
@@ -201,6 +200,11 @@ public:
         randomness.zero_extend_randomness_w_update = read_zero_extend_randomness<T, IN_BW, IN_BW - F, F, K_INT, 2>(mpc, -1, p.in_dim, p.out_dim);
     }
     
+    void read_randomness(MPC& mpc) {
+        readForwardRandomness(mpc);
+        readBackwardRandomness(mpc);
+    }
+
     template<int TRUNC_FWD>
     auto forward(const FixTensor<T, IN_BW, F, K_INT, 2>& x_share, const FixTensor<T, IN_BW, F, K_INT, 2>& x_reconstructed = nullptr) {
         if (mpc_instance == nullptr) throw std::runtime_error("MPC instance must be initialized before using forward.");
@@ -246,13 +250,20 @@ public:
         dW_share = secure_matmul(input_rec_T_share, incoming_grad_share, randomness.matmul_randomness_dw, &input_rec_T, &incoming_grad_rec);
         auto dW_share_m = truncate_reduce_tensor(dW_share);
         dW_share = zero_extend_tensor(dW_share_m, randomness.zero_extend_randomness_w_update);
+        auto dW_share_rec = reconstruct_tensor(dW_share);
+        std::cout << "dW share reconstructed" << std::endl;
+        for(int i = 0; i < p.in_dim; i++){
+            std::cout << dW_share_rec(i, i) << " ";
+            if (i == p.in_dim - 1){
+                std::cout << std::endl;
+            }
+        }
         return outgoing_grad_share_extend;
     }
 
     void update(float lr) {
         // The division by batch size is folded into the learning rate
-        float scaled_lr = lr / p.B;
-        sgd_update(W_share, dW_share, FixIn(scaled_lr), randomness.zero_extend_randomness);
+        sgd_update(W_share, dW_share, FixIn(lr), randomness.zero_extend_randomness);
     }
     
 };

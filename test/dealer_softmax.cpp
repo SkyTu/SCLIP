@@ -28,7 +28,7 @@ void dealer_generate_softmax_randomness() {
     Buffer randomness_buf_0(p0_data);
     Buffer randomness_buf_1(p1_data);
     
-    softmax_layer.generate_softmax_randomness(randomness_buf_0, randomness_buf_1);
+    softmax_layer.generate_randomness(randomness_buf_0, randomness_buf_1);
 
     size_t p0_offset = randomness_buf_0.ptr - p0_data;
     size_t p1_offset = randomness_buf_1.ptr - p1_data;

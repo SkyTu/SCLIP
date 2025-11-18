@@ -1,10 +1,9 @@
 #ifndef SCLIP_FIX_TENSOR_H
 #define SCLIP_FIX_TENSOR_H
-
+# pragma once
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "mpc/fix.h"
 #include "utils/random.h"
-#include "utils/io.h"
 #include <vector>
 #include <string>
 #include <cassert>

@@ -152,7 +152,7 @@ void test_cossim(MPC& mpc) {
         FixTensor<T, OUT_BW, F, K_INT, 2> proj_I_plain_full_bw = dI_plain * image_plain_ext;
         proj_I_plain_full_bw.trunc_in_place(F);
         // 3. proj_I = sum(proj_I)
-        FixTensor<T, OUT_BW, F, K_INT, 1> proj_I_m_plain = sum_reduce_tensor<T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_I_plain_full_bw);
+        FixTensor<T, OUT_BW, F, K_INT, 1> proj_I_m_plain = sum_reduce_tensor<1, T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_I_plain_full_bw);
         // 4. Broadcast proj_I
         FixTensor<T, OUT_BW, F, K_INT, 2> proj_I_broadcasted(params.B, params.in_dim);
         for(int i = 0; i < params.B; i++) {
@@ -180,7 +180,7 @@ void test_cossim(MPC& mpc) {
         dT_final_full_bw.trunc_in_place(F);
         auto proj_T_plain_full_bw = dT_plain * text_plain_ext;
         proj_T_plain_full_bw.trunc_in_place(F);
-        FixTensor<T, OUT_BW, F, K_INT, 1> proj_T_m_plain = sum_reduce_tensor<T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_T_plain_full_bw);
+        FixTensor<T, OUT_BW, F, K_INT, 1> proj_T_m_plain = sum_reduce_tensor<1, T, OUT_BW, F, K_INT, Eigen::RowMajor>(proj_T_plain_full_bw);
         
         // 4. Broadcast proj_T
         FixTensor<T, OUT_BW, F, K_INT, 2> proj_T_broadcasted(params.B, params.in_dim);

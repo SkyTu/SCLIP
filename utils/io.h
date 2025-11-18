@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>
+#include "mpc/mpc.h"
+#include "mpc/fix_tensor.h" // Include for FixTensor
 
 // Forward declaration is needed for the is_base_of check inside the template.
 struct FixBase;
@@ -80,4 +82,38 @@ inline std::vector<uint8_t> read_bytes_with_length(const std::string& filename) 
     in.read(reinterpret_cast<char*>(bytes.data()), len);
     in.close();
     return bytes;
+}
+
+// Function to load raw binary data (like from a converted PyTorch tensor) into a FixTensor
+template <typename T, int BW, int F, int K_INT, int DIMS>
+FixTensor<T, BW, F, K_INT, DIMS> load_binary_to_fixtensor(const std::string& filename, const Eigen::array<long, DIMS>& dims) {
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) {
+        throw std::runtime_error("Cannot open feature file: " + filename);
+    }
+
+    // Determine file size
+    in.seekg(0, std::ios::end);
+    long file_size = in.tellg();
+    in.seekg(0, std::ios::beg);
+
+    long num_elements = 1;
+    for(int i = 0; i < DIMS; ++i) {
+        num_elements *= dims[i];
+    }
+
+    if (file_size != num_elements * sizeof(float)) {
+        throw std::runtime_error("File size does not match expected tensor dimensions for " + filename);
+    }
+
+    std::vector<float> float_data(num_elements);
+    in.read(reinterpret_cast<char*>(float_data.data()), file_size);
+    in.close();
+
+    FixTensor<T, BW, F, K_INT, DIMS> tensor(dims);
+    for (long i = 0; i < num_elements; ++i) {
+        tensor.data()[i] = Fix<T, BW, F, K_INT>(float_data[i]);
+    }
+
+    return tensor;
 }

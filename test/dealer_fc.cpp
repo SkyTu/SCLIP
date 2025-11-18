@@ -21,7 +21,7 @@ void dealer_generate_fc_randomness() {
     const int OUT_BW_fc = 48;
 
     // Parameters for the FC layer (B, in_dim, out_dim, use_bias, reconstructed_input, trunc_bwd)
-    FCLayerParams params_fc = {5, 2, 3, false, false, 0};
+    FCLayerParams params_fc = {5, 2, 3, false, false};
     FCLayer<T_fc, IN_BW_fc, OUT_BW_fc, F_fc, K_INT_fc> fc_layer(params_fc);
 
     // --- Generate Forward Randomness ---

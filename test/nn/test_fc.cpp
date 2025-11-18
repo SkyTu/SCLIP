@@ -23,7 +23,7 @@ void test_fc(MPC& mpc) {
     using WeightTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::WeightTensor;
     using BiasTensor = FCLayer<T, IN_BW, OUT_BW, F, K_INT>::BiasTensor;
 
-    FCLayerParams params = {5, 2, 3, false, false, 0}; // B, in_dim, out_dim, use_bias=false, reconstructed_input, trunc_bwd
+    FCLayerParams params = {5, 2, 3, false, false}; // B, in_dim, out_dim, use_bias=false, reconstructed_input, trunc_bwd
     FCLayer<T, IN_BW, OUT_BW, F, K_INT> fc_layer(params);
 
     std::cout << "FC Layer initialized" << std::endl;

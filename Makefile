@@ -4,7 +4,7 @@ LDFLAGS=-pthread
 
 .PHONY: all clean test-fc test-primitives test-fc-new test-secure-matmul test-fixtensor-ops test-sum-reduce test-softmax-new train
 
-all: test/dealer test/mpc/test_mpc_primitives test/dealer_fc test/nn/test_fc test/dealer_cosinesim test/nn/test_cossim test/dealer_softmax test/nn/test_softmax train
+all: test/dealer test/mpc/test_mpc_primitives test/dealer_fc test/nn/test_fc test/dealer_cosinesim test/nn/test_cossim test/dealer_softmax test/nn/test_softmax test/experiments/train test/experiments/dealer
 
 test-secure-matmul: test/dealer_matmul test/mpc/test_secure_matmul
 	@mkdir -p randomness/P0 randomness/P1
@@ -52,7 +52,10 @@ test-sum-reduce: test/mpc/test_sum_reduce
 	@echo "--- Running Isolated Test for sum_reduce_tensor ---"
 	@./test/mpc/test_sum_reduce
 
-train: experiments/train.o mpc/mpc.o utils/comm.o
+experiments/train: experiments/train.o mpc/mpc.o utils/comm.o
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+experiments/dealer: experiments/dealer.o mpc/mpc.o utils/comm.o
 	$(CXX) $(LDFLAGS) -o $@ $^
 
 test/nn/test_fc: test/nn/test_fc.o mpc/mpc.o utils/comm.o
@@ -124,5 +127,22 @@ test/dealer: test/dealer.o
 test/dealer.o: test/dealer.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+run-train: train
+	@echo "--- Running SCLIP Training ---"
+	@./train 0 CIFAR10
+
+test-data-loading: experiments/test_data_loading
+	@echo "--- Testing Data Loading and Batch Creation ---"
+	@./experiments/test_data_loading CIFAR10
+
+train: experiments/train.o mpc/mpc.o utils/comm.o
+	$(CXX) $(LDFLAGS) -o experiments/train $^
+
+experiments/test_data_loading: experiments/test_data_loading.o
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+experiments/test_data_loading.o: experiments/test_data_loading.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 clean:
-	rm -f test/dealer test/dealer_fc test/dealer_matmul test/utils/test_comm test/mpc/test_mpc_primitives test/mpc/test_secure_matmul test/nn/test_fc test/dealer_cosinesim test/nn/test_cossim test/mpc/test_fixtensor_ops utils/*.o mpc/*.o test/mpc/*.o test/nn/*.o test/*.o test/dealer_softmax test/nn/test_softmax train experiments/*.o
+	rm -f test/dealer test/dealer_fc test/dealer_matmul test/utils/test_comm test/mpc/test_mpc_primitives test/mpc/test_secure_matmul test/nn/test_fc test/dealer_cosinesim test/nn/test_cossim test/mpc/test_fixtensor_ops utils/*.o mpc/*.o test/mpc/*.o test/nn/*.o test/*.o experiments/*.o test/dealer_softmax test/nn/test_softmax experiments/train experiments/*.o experiments/test_data_loading

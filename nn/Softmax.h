@@ -59,8 +59,7 @@ class SoftmaxLayer {
             return total_size;
         }
 
-        SoftmaxRandomness<T, BW, smallBW, F, K_INT> read_softmax_randomness(MPC& mpc){
-            SoftmaxRandomness<T, BW, smallBW, F, K_INT> randomness;
+        void read_randomness(MPC& mpc){
             randomness.exp_scalar_randomness = read_exp_scalar_randomness<T, BW, smallBW, F, K_INT>(mpc, false);
             randomness.elementwise_mul_randomness_temperature = read_elementwise_mul_randomness<T, BW, smallBW, F, K_INT, 2>(mpc, -1, p.B, p.B);
             randomness.zero_extend_randomness_temperature = read_zero_extend_randomness<T, BW, smallBW, F, K_INT, 2>(mpc, -1, p.B, p.B);
@@ -73,10 +72,9 @@ class SoftmaxLayer {
             randomness.elementwise_mul_randomness_update_lambda = read_elementwise_mul_randomness<T, BW, smallBW, F, K_INT, 1>(mpc, -1, 1, 1);
             randomness.zero_extend_randomness_update_dlambda[0] = read_zero_extend_randomness<T, BW, smallBW, F, K_INT, 1>(mpc, -1, 1, 1);
             randomness.zero_extend_randomness_update_dlambda[1] = read_zero_extend_randomness<T, BW, smallBW, F, K_INT, 1>(mpc, -1, 1, 1);
-            return randomness;
         }
 
-        void generate_softmax_randomness(Buffer& p0_buf, Buffer& p1_buf){
+        void generate_randomness(Buffer& p0_buf, Buffer& p1_buf){
             uint8_t * pre_ptr = p0_buf.ptr;
             generate_exp_scalar_randomness<T, BW, smallBW, F, K_INT>(p0_buf, p1_buf, false);
             FixTensor<T, smallBW, F, K_INT, 2> r_x_m_tensor(p.B, p.B);
@@ -91,7 +89,6 @@ class SoftmaxLayer {
                     sample_tensor(i, j) = Fix<T, smallBW, F, K_INT>(sample_val[i]);
                 }
             }
-            std::cout << "r_x_m_tensor: " << r_x_m_tensor << std::endl;
             generate_elementwise_mul_randomness<T, BW, smallBW, F, K_INT, 2, Eigen::RowMajor>(p0_buf, p1_buf, -1, p.B, p.B, &r_x_m_tensor, &sample_tensor);
             generate_zero_extend_randomness<T, BW, smallBW, F, K_INT, 2>(p0_buf, p1_buf, -1, p.B, p.B);
             generate_exp_randomness<T, BW, smallBW, F, K_INT, 2>(p0_buf, p1_buf, -1, p.B, p.B);

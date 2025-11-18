@@ -40,7 +40,7 @@ void test_softmax(MPC& mpc) {
         input_share.setZero();
     }
     
-    softmax_layer.randomness = softmax_layer.read_softmax_randomness(mpc);
+    softmax_layer.read_randomness(mpc);
     std::cout << "Randomness loaded" << std::endl;
 
     std::cout << "Executing backward pass" << std::endl;

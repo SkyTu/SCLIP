@@ -17,7 +17,7 @@ int main() {
     CosSimLayerParams params = {5, 10}; // B=5, in_dim=10
     CosSimLayer<T, IN_BW, OUT_BW, F, K_INT> cosinesim_layer(params);
 
-    size_t total_size = cosinesim_layer.get_randomness_size();
+    size_t total_size = cosinesim_layer.getRandomnessSize();
     std::cout << "Total randomness size per party: " << total_size << " bytes." << std::endl;
 
     uint8_t* p0_data = new uint8_t[total_size];
